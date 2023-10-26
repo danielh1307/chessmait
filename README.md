@@ -1,1 +1,5 @@
 # chessmait
+
+![](documentation/logo.jpg)
+
+
