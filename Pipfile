@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 python-chess = "*"
+pytest = "*"
 
 [dev-packages]
 
