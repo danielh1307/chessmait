@@ -1,4 +1,12 @@
-# chessmait
+# Chessmait
+
+Chessmait is a chess engine powered by a neural network, designed to take your chess experience to the next
+level.  
+With its advanced algorithms and strategic prowess, Chessmait is your perfect sparring partner to sharpen your
+skills and enjoy thrilling games of chess.  
+
+Whether you're a novice or a grandmaster, Chessmait promises engaging matches that will keep you coming back for more.  
+Give it a try and experience the future of chess today.
 
 ![](documentation/logo.jpg)
 
@@ -40,12 +48,14 @@ $ pytest
 
 ### Kaggle
 
-To preprocess the Kaggle data, execute the script [preprocess_kaggle.py](src/preprocessing/preprocess_kaggle.py) from the project's root directory:
+To preprocess the Kaggle data, execute the script [preprocess_kaggle.py](src/preprocessing/preprocess_kaggle.py) from
+the project's root directory:
 
 ```
 $ python src\preprocessing\preprocess_kaggle.py
 ```
 
-It will preprocess the Kaggle data and a single output csv file will be located in [data/preprocessed/kaggle](data/preprocessed/kaggle) directory.
+It will preprocess the Kaggle data and a single output csv file will be located
+in [data/preprocessed/kaggle](data/preprocessed/kaggle) directory.
 
 
