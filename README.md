@@ -3,7 +3,7 @@
 Chessmait is a chess engine powered by a neural network, designed to enhance your chess experience.
 
 It's a product of a final thesis for
-the [CAS course "Machine learning for Software Developers"](https://www.ost.ch/de/weiterbildung/weiterbildungsangebot/informatik/data-engineering-machine-intelligence/cas-machine-learning-for-software-engineers)
+the [CAS course "Machine learning for Software Engineers"](https://www.ost.ch/de/weiterbildung/weiterbildungsangebot/informatik/data-engineering-machine-intelligence/cas-machine-learning-for-software-engineers)
 at the [University of Applied Sciences in Eastern Switzerland](https://www.ost.ch/en/).
 
 More details can be found in our [project proposal](documentation/Projektantrag_ML_Schach.pdf) (in German language).
