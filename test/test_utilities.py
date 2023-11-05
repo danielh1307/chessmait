@@ -8,3 +8,7 @@ def test_is_checkmate():
 # https://www.chess.com/forum/view/game-showcase/fastest-stalemate-known-in-chess
 def test_is_stalemate():
     assert utilities.is_stalemate("5bnr/4p1pq/4Qpkr/7p/7P/4P3/PPPP1PP1/RNB1KBNR b KQ - 2 10")
+
+
+def test_tensor():
+    print(utilities.batchtotensor("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP4N/P2QP1PP/1RB1KB1R b Kk - 7 8"))
