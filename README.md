@@ -1,12 +1,12 @@
 # Chessmait
 
-Chessmait is a chess engine powered by a neural network, designed to take your chess experience to the next
-level.  
-With its advanced algorithms and strategic prowess, Chessmait is your perfect sparring partner to sharpen your
-skills and enjoy thrilling games of chess.
+Chessmait is a chess engine powered by a neural network, designed to enhance your chess experience.
 
-Whether you're a novice or a grandmaster, Chessmait promises engaging matches that will keep you coming back for more.  
-Give it a try and experience the future of chess today.
+It's a product of a final thesis for
+the [CAS course "Machine learning for Software Developers"](https://www.ost.ch/de/weiterbildung/weiterbildungsangebot/informatik/data-engineering-machine-intelligence/cas-machine-learning-for-software-engineers)
+at the [University of Applied Sciences in Eastern Switzerland](https://www.ost.ch/en/).
+
+More details can be found in our [project proposal](documentation/Projektantrag_ML_Schach.pdf) (in German language).
 
 ![](documentation/logo.jpg)
 
@@ -53,8 +53,8 @@ contains 50.000 games, including a stockfish evaluation for each move. The data 
 under [data/raw/kaggle](data/raw/kaggle).
 
 When preprocessing the data, we create one single .csv file. This file contains each position from the games
-in [FEN](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) notation including its stockfish evaluation.
-This can then be used to train a neural network to learn evaluations based on positions.  
+in [FEN notation](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) including its stockfish evaluation.
+It can then be used to train a neural network to learn evaluations based on positions.
 
 To preprocess the Kaggle data, execute the script [preprocess_kaggle.py](src/preprocessing/preprocess_kaggle.py) from
 the project's root directory:
@@ -63,7 +63,7 @@ the project's root directory:
 $ python src\preprocessing\preprocess_kaggle.py
 ```
 
-It will preprocess the Kaggle data and a single output csv file will be located
-in [data/preprocessed/kaggle](data/preprocessed/kaggle) directory.
+It will preprocess the Kaggle data, and a single output csv file will be written
+to [data/preprocessed/kaggle](data/preprocessed/kaggle) directory.
 
 
