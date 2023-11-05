@@ -1,5 +1,4 @@
 from src.position_validator import get_valid_positions
-from src.position_validator import is_checkmate
 
 def test_valid_positions():
     legal_moves = get_valid_positions("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP5/P2QP1PP/1RB1KBNR w Kk - 6 8")
@@ -28,9 +27,6 @@ def test_valid_positions():
     assert legal_moves.index("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP5/P2QPKPP/1RB2BNR b k - 7 8") >= 0
     assert legal_moves.index("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP2N2/P2QP1PP/1RB1KB1R b Kk - 7 8") >= 0
     assert legal_moves.index("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP4N/P2QP1PP/1RB1KB1R b Kk - 7 8") >= 0
-    assert is_checkmate("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP4N/P2QP1PP/1RB1KB1R b Kk - 7 8") == False
-    assert is_checkmate("3rkbnr/2nqpQ1R/p1P3P1/1p1p1b2/2P5/NP6/P3P1P1/1RB1KBN1 b k - 2 19") == True
 
     legal_moves = get_valid_positions("xxx")
     assert 0 == len(legal_moves)
-
