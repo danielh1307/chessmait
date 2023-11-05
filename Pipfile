@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 python-chess = "*"
 pytest = "*"
+numpy = "*"
+torch = "*"
 
 [dev-packages]
 
