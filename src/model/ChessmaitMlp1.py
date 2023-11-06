@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 
@@ -33,13 +32,3 @@ class ChessmaitMlp1(nn.Module):
         x = self.layer3(x)
         x = self.output_layer(x)
         return x
-
-
-# Create an instance of the model
-model = ChessmaitMlp1()
-
-# Define the Adam optimizer with specified parameters
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001, betas=(0.90, 0.99), eps=1e-8)
-
-# Define the loss function for regression (e.g., Mean Squared Error)
-criterion = nn.MSELoss()
