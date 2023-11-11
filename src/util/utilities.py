@@ -49,7 +49,7 @@ def fen_to_tensor(fen):
 
     Returns
     -------
-    Array size 8x8 (board) x6 (Figure w/color). First six values represent the figure. 1 for black -1 for white.
+    Array size 8x8 (board) x6 (Figure w/color). First six values represent the figure. 1 for turn -1 for wait.
     """
     board = chess.Board()
     board.set_fen(fen)
@@ -62,7 +62,7 @@ def fen_to_tensor(fen):
             6: [0,0,0,0,0,1],  # King
             0: [0,0,0,0,0,0]   #
         }
-    return torch.from_numpy(np.array([np.array(chess_dict[(board.piece_type_at(sq) if board.piece_type_at(sq) else 0)]) * (-1 if board.color_at(sq) == False else 1) for sq in chess.SQUARES]).astype(np.float16).reshape(-1))
+    return torch.from_numpy(np.array([np.array(chess_dict[(board.piece_type_at(sq) if board.piece_type_at(sq) else 0)])  * (-1 if board.color_at(sq) == False else 1) * (-1 if board.turn == chess.WHITE else 1)for sq in chess.SQUARES]).astype(np.float16).reshape(-1))
 
 
 
