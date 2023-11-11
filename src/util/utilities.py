@@ -2,6 +2,10 @@ import chess
 import numpy as np
 import torch
 
+CLASS_WIN = 1
+CLASS_DRAW = 0
+CLASS_LOSS = 2
+
 
 # Check checkmate
 def is_checkmate(fen) -> bool:
