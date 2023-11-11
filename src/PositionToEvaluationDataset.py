@@ -17,6 +17,10 @@ class PositionToEvaluationDataset(Dataset):
     def __init__(self, csv_file):
         self.data = pd.read_csv(csv_file)
 
+        # Calculate min and max evaluation scores for normalization
+        self.min_score = self.data['Evaluation'].min()
+        self.max_score = self.data['Evaluation'].max()
+
     def __len__(self):
         return len(self.data)
 
@@ -25,4 +29,5 @@ class PositionToEvaluationDataset(Dataset):
 
         x = to_tensor(x_fen)  # Convert string to tensor
         y = torch.tensor(self.data.iloc[idx, 1], dtype=torch.float32)  # position evaluation
-        return x, y
+        y_normalized = (y - self.min_score) / (self.max_score - self.min_score)  # Normalize evaluation
+        return x, y_normalized
