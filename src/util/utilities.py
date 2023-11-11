@@ -62,7 +62,7 @@ def fen_to_tensor(fen):
             6: [0,0,0,0,0,1],  # King
             0: [0,0,0,0,0,0]   #
         }
-    return torch.from_numpy(np.array([np.array(chess_dict[(board.piece_type_at(sq) if board.piece_type_at(sq) else 0)])  * (-1 if board.color_at(sq) == False else 1) * (-1 if board.turn == chess.WHITE else 1)for sq in chess.SQUARES]).astype(np.float16).reshape(-1))
+    return torch.from_numpy(np.array([np.array(chess_dict[(board.piece_type_at(sq) if board.piece_type_at(sq) else 0)])  * (-1 if board.color_at(sq) == False else 1) * (-1 if board.turn == chess.WHITE else 1)for sq in chess.SQUARES]).astype(np.float32).reshape(-1))
 
 
 
