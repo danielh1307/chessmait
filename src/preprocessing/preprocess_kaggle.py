@@ -97,6 +97,7 @@ def preprocess_kaggle():
     output_data = []
 
     number_of_games_preprocessed = 0
+    number_of_evaluations = 0
     with open(os.path.join(kaggle_data_path_raw, "data.pgn")) as pgn_file:
         while True:
             game = chess.pgn.read_game(pgn_file)
@@ -144,14 +145,18 @@ def preprocess_kaggle():
                 try:
                     int(evaluation)
                 except ValueError:
-                    print(f"We skip position {fen} since the evaluation {evaluation} is not an integer")
+                    #print(f"We skip position {fen} since the evaluation {evaluation} is not an integer")
                     continue
 
                 output_data.append([fen, evaluation])
                 move_number += 1
+                number_of_evaluations += 1
             number_of_games_preprocessed += 1
 
         write_preprocessed_csv(os.path.join(kaggle_data_path_preprocessed, OUTPUT_FILE_NAME), output_data)
+
+    print(f"Number of games preprocessed: {number_of_games_preprocessed}, "
+          f"number of evaluations: {number_of_evaluations}")
 
 
 if __name__ == "__main__":
