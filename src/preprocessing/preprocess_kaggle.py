@@ -5,6 +5,8 @@ import chess.pgn
 
 kaggle_data_path_raw = os.path.join("data", "raw", "kaggle")
 kaggle_data_path_preprocessed = os.path.join("data", "preprocessed", "kaggle")
+OUTPUT_FILE_NAME = "kaggle_preprocessed.csv"
+NUMBER_OF_GAMES_TO_PREPROCESS = -1  # set to -1 to preprocess all games
 
 
 def get_move_scores(csv_file: str) -> dict:
@@ -94,11 +96,15 @@ def preprocess_kaggle():
     result_dict = get_move_scores(os.path.join(kaggle_data_path_raw, "stockfish.csv"))
     output_data = []
 
+    number_of_games_preprocessed = 0
     with open(os.path.join(kaggle_data_path_raw, "data.pgn")) as pgn_file:
         while True:
             game = chess.pgn.read_game(pgn_file)
 
             if game is None:
+                break
+
+            if number_of_games_preprocessed > 0 and number_of_games_preprocessed == NUMBER_OF_GAMES_TO_PREPROCESS:
                 break
 
             event_number = game.headers["Event"]
@@ -132,10 +138,13 @@ def preprocess_kaggle():
                 evaluation = result_dict[event_number][move_number]
                 output_data.append([fen, evaluation])
                 move_number += 1
+            number_of_games_preprocessed += 1
 
-        write_preprocessed_csv(os.path.join(kaggle_data_path_preprocessed, "kaggle_preprocessed.csv"), output_data)
+        write_preprocessed_csv(os.path.join(kaggle_data_path_preprocessed, OUTPUT_FILE_NAME), output_data)
 
 
 if __name__ == "__main__":
     print("Starting to preprocess the Kaggle data ...")
+    if NUMBER_OF_GAMES_TO_PREPROCESS > 0:
+        print(f"Preprocessing {NUMBER_OF_GAMES_TO_PREPROCESS} games ...")
     preprocess_kaggle()
