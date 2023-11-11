@@ -136,6 +136,17 @@ def preprocess_kaggle():
                 board.push(move)
                 fen = board.fen()
                 evaluation = result_dict[event_number][move_number]
+                # make sure evaluation is always an integer - otherwise training
+                # our regression model is not going to work
+                # usually, if there is a forced mate detected by the engine, the evaluation
+                # is not an integer any more
+                # TODO: how to handle situations like "mate in 5"?
+                try:
+                    int(evaluation)
+                except ValueError:
+                    print(f"We skip position {fen} since the evaluation {evaluation} is not an integer")
+                    continue
+
                 output_data.append([fen, evaluation])
                 move_number += 1
             number_of_games_preprocessed += 1
