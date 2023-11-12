@@ -53,25 +53,28 @@ def fen_to_tensor(fen):
 
     Returns
     -------
-    Array size 8x8 (board) x6 (Figure w/color). First six values represent the figure. 1 for turn -1 for wait.
+    Array size  12 (Figures 6xWHITE, 6xBLACK) 8x8 (board). First 12 values represent the figures.
+    For each color and type there is an array of 64 fields.
+    Values are 1 for turn -1 for wait.
     """
     board = chess.Board()
     board.set_fen(fen)
-    chess_dict = {
-            1: [1,0,0,0,0,0],  # Pawn
-            2: [0,1,0,0,0,0],  # Knight
-            3: [0,0,1,0,0,0],  # Bishop
-            4: [0,0,0,1,0,0],  # Rook
-            5: [0,0,0,0,1,0],  # Queen
-            6: [0,0,0,0,0,1],  # King
-            0: [0,0,0,0,0,0]   #
-        }
-    return torch.from_numpy(np.array([np.array(chess_dict[(board.piece_type_at(sq) if board.piece_type_at(sq) else 0)])  * (-1 if board.color_at(sq) == False else 1) * (-1 if board.turn == chess.WHITE else 1)for sq in chess.SQUARES]).astype(np.float32).reshape(-1))
 
+    result = np.zeros((12, 64))
+    for sq in chess.SQUARES:
+        piece_type = board.piece_type_at(sq)
+        if piece_type != 0: # Not no color
+            if board.color_at(sq) == chess.WHITE: # white color on layer 1-6
+                piece_layer = piece_type
+            else: # black color on layer 6-12
+                piece_layer = int(piece_type or 0) + 6
+            piece_layer = piece_layer - 1
+            result[piece_layer, sq] =  (-1 if board.color_at(sq) == chess.WHITE else 1) * (-1 if board.turn == chess.WHITE else 1)
+    return result
 
 
 def main():
-    tensor = fen_to_tensor("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R b")
+    tensor = fen_to_tensor("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
     print(tensor)
 
 if __name__ == "__main__":
