@@ -56,6 +56,20 @@ def fen_to_tensor(fen):
     Array size  12 (Figures 6xWHITE, 6xBLACK) 8x8 (board). First 12 values represent the figures.
     For each color and type there is an array of 64 fields.
     Values are 1 for turn -1 for wait.
+PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+    Arrays:
+    0:   Pawn, white
+    1:   Knight, white
+    2:   Bishop, white
+    3:   Rook, white
+    5:   Queen, white
+    6:   King, white
+    7:   Pawn, black
+    8:   Knight, black
+    9:   Bishop, black
+    10:  Rook, black
+    11:  Queen, black
+    12:  Knight, black
     """
     board = chess.Board()
     board.set_fen(fen)
