@@ -145,7 +145,6 @@ def preprocess_kaggle():
                 try:
                     int(evaluation)
                 except ValueError:
-                    #print(f"We skip position {fen} since the evaluation {evaluation} is not an integer")
                     continue
 
                 output_data.append([fen, evaluation])
