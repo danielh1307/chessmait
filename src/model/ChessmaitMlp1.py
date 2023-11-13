@@ -7,7 +7,7 @@ class ChessmaitMlp1(nn.Module):
     def __init__(self):
         super(ChessmaitMlp1, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Linear(384, 1048),
+            nn.Linear(768, 1048),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
