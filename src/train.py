@@ -6,9 +6,10 @@ import torch
 import torch.nn as nn
 import wandb
 from torch.utils.data import DataLoader, random_split
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
-from src.model.ChessmaitMlp1 import ChessmaitMlp1
+from src.model.ChessmaitMlp2 import ChessmaitMlp2
 
 ############################################################
 # This is the central Python script to perform the training
@@ -19,12 +20,12 @@ PATH_TO_DATAFILE = os.path.join("data", "preprocessed", "kaggle")
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
-DATA_FILE = "kaggle_preprocessed_20000.csv"
-NUMBER_OF_GAMES_FOR_TRAINING = 20000
+DATA_FILE = "kaggle_preprocessed.csv"
+NUMBER_OF_GAMES_FOR_TRAINING = 49946
 WANDB_REPORTING = True
 REGRESSION_TRAINING = True
 
-model = ChessmaitMlp1()
+model = ChessmaitMlp2()
 dataset = PositionToEvaluationDataset(os.path.join(PATH_TO_DATAFILE, DATA_FILE))
 
 
@@ -69,7 +70,7 @@ def get_training_configuration() -> argparse.Namespace:
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
     _config.epochs = 15
-    _config.batch_size = 128
+    _config.batch_size = 1024
 
     return _config
 
@@ -108,6 +109,7 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
 def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
                 _optimizer: torch.optim.Adam,
+                _scheduler,
                 _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader):
@@ -158,6 +160,9 @@ def train_model(_config: argparse.Namespace,
         if WANDB_REPORTING:
             wandb.log(epoch_result)
 
+        # step the scheduler - adjust the learning rate if validation loss stops decreasing
+        _scheduler.step(val_loss)
+
         # Save model if validation loss has decreased
         if val_loss < best_val_loss:
             torch.save(model.state_dict(), "best_model.pth")
@@ -188,5 +193,9 @@ if __name__ == "__main__":
         loss_function = nn.CrossEntropyLoss()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
-    train_model(config, model, optimizer, loss_function, train_loader, val_loader)
+    # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing
+    # this is to try to prevent overfitting of the model
+    scheduler = ReduceLROnPlateau(optimizer, 'min')  # 'min' means reducing the LR when the metric stops decreasing
+
+    train_model(config, model, optimizer, scheduler, loss_function, train_loader, val_loader)
     wandb.finish()
