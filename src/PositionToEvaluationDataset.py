@@ -14,8 +14,9 @@ def to_tensor(fen_position):
 
 
 class PositionToEvaluationDataset(Dataset):
-    def __init__(self, csv_file, device):
-        self.data = pd.read_csv(csv_file)
+    def __init__(self, csv_files, device):
+        _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
+        self.data = pd.concat(_dataframes, ignore_index=True)
         self.device = device
 
         # Calculate min and max evaluation scores for normalization
@@ -24,6 +25,9 @@ class PositionToEvaluationDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+    def get_min_max_score(self):
+        return self.min_score, self.max_score
 
     def __getitem__(self, idx):
         x_fen = self.data.iloc[idx, 0]  # FEN position

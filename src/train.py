@@ -5,27 +5,30 @@ from typing import Union
 import torch
 import torch.nn as nn
 import wandb
-from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader, random_split
 
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
-from src.model.ChessmaitMlp2 import ChessmaitMlp2
+from src.model.ChessmaitMlp1 import ChessmaitMlp1
 
 ############################################################
 # This is the central Python script to perform the training
 ############################################################
 
-PATH_TO_DATAFILE = os.path.join("data", "preprocessed", "kaggle")
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
 
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
-DATA_FILE = "kaggle_preprocessed.csv"
-NUMBER_OF_GAMES_FOR_TRAINING = 49946
-WANDB_REPORTING = True
+DATA_FILES = ["kaggle_preprocessed.csv",
+              "ficsgamesdb_2022_standard2000_nomovetimes_310980.csv",
+              "ficsgamesdb_202301_standard2000_nomovetimes_309749.csv",
+              "ficsgamesdb_202302_standard2000_nomovetimes_310978.csv"]
+
+WANDB_REPORTING = False
 REGRESSION_TRAINING = True
 
-model = ChessmaitMlp2()
+model = ChessmaitMlp1()
 
 
 def get_device():
@@ -62,8 +65,7 @@ def get_training_configuration() -> argparse.Namespace:
 
     """
     _config = argparse.Namespace()
-    _config.number_of_games_for_training = NUMBER_OF_GAMES_FOR_TRAINING
-    _config.train_percentage = 0.7  # percentage of data which is used for training
+    _config.train_percentage = 0.8  # percentage of data which is used for training
     _config.val_percentage = 0.15  # percentage of data which is used for validation (rest is for testing)
     _config.learning_rate = 0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
@@ -91,7 +93,13 @@ def get_dataloaders(_config: argparse.Namespace, _device: str) -> (DataLoader, D
 
     """
     print("Prepare dataloaders ...")
-    dataset = PositionToEvaluationDataset(os.path.join(PATH_TO_DATAFILE, DATA_FILE), _device)
+    csv_files = []
+    for data_file in DATA_FILES:
+        csv_files.append(os.path.join(PATH_TO_DATAFILE, data_file))
+
+    dataset = PositionToEvaluationDataset(csv_files, _device)
+    _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
+    print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
 
     torch.manual_seed(42)
 
@@ -99,6 +107,9 @@ def get_dataloaders(_config: argparse.Namespace, _device: str) -> (DataLoader, D
     val_size = int(_config.val_percentage * len(dataset))
     test_size = len(dataset) - train_size - val_size
     train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
+
+    _config.number_of_evaluations_for_training = train_size
+    print(f"Number of training games is {_config.number_of_evaluations_for_training}")
 
     # Create DataLoaders
     _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True)
@@ -165,8 +176,9 @@ def train_model(_config: argparse.Namespace,
         if WANDB_REPORTING:
             wandb.log(epoch_result)
 
+        # not sure if this really has any benefit - for the moment, we comment it out
         # step the scheduler - adjust the learning rate if validation loss stops decreasing
-        _scheduler.step(val_loss)
+        # _scheduler.step(val_loss)
 
         # Save model if validation loss has decreased
         if val_loss < best_val_loss:
