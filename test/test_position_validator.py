@@ -1,4 +1,4 @@
-from src.position_validator import get_valid_positions
+from src.lib.position_validator import get_valid_positions
 
 def test_valid_positions():
     legal_moves = get_valid_positions("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP5/P2QP1PP/1RB1KBNR w Kk - 6 8")

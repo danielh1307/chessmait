@@ -1,4 +1,5 @@
-from src.util import utilities
+from lib import utilities
+
 
 def test_is_checkmate():
     assert utilities.is_checkmate("2rqkbnr/p2np1pp/1pp1bp2/3p4/3P1P2/NPP4N/P2QP1PP/1RB1KB1R b Kk - 7 8") == False
