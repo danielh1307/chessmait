@@ -1,4 +1,4 @@
-from lib import utilities
+from src.lib import utilities
 
 
 def test_is_checkmate():
