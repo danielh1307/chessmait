@@ -26,10 +26,9 @@ WANDB_REPORTING = True
 REGRESSION_TRAINING = True
 
 model = ChessmaitMlp2()
-dataset = PositionToEvaluationDataset(os.path.join(PATH_TO_DATAFILE, DATA_FILE))
 
 
-def check_cuda():
+def get_device():
     """
     Checks which device is most appropriate to perform the training.
     If cuda is available, cuda is returned, otherwise mps or cpu.
@@ -75,13 +74,15 @@ def get_training_configuration() -> argparse.Namespace:
     return _config
 
 
-def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, DataLoader):
+def get_dataloaders(_config: argparse.Namespace, _device: str) -> (DataLoader, DataLoader, DataLoader):
     """
 
     Parameters
     ----------
     _config : argparse.Namespace
         configuration values for this training
+    _device : str
+        device on which the tensors are processed
 
     Returns
     -------
@@ -90,6 +91,8 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
 
     """
     print("Prepare dataloaders ...")
+    dataset = PositionToEvaluationDataset(os.path.join(PATH_TO_DATAFILE, DATA_FILE), _device)
+
     torch.manual_seed(42)
 
     train_size = int(_config.train_percentage * len(dataset))
@@ -112,8 +115,10 @@ def train_model(_config: argparse.Namespace,
                 _scheduler,
                 _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss],
                 _train_loader: DataLoader,
-                _val_loader: DataLoader):
+                _val_loader: DataLoader,
+                _device: str):
     print("Starting training ...")
+    _model.to(_device)
 
     if WANDB_REPORTING:
         wandb.watch(_model)
@@ -179,9 +184,9 @@ if __name__ == "__main__":
     else:
         print("Training on a classification problem ...")
 
-    device = check_cuda()
+    device = get_device()
     config = get_training_configuration()
-    train_loader, val_loader, test_loader = get_dataloaders(config)
+    train_loader, val_loader, test_loader = get_dataloaders(config, device)
 
     if WANDB_REPORTING:
         config.model = type(model).__name__
@@ -193,9 +198,9 @@ if __name__ == "__main__":
         loss_function = nn.CrossEntropyLoss()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
-    # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing
+    # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model
     scheduler = ReduceLROnPlateau(optimizer, 'min')  # 'min' means reducing the LR when the metric stops decreasing
 
-    train_model(config, model, optimizer, scheduler, loss_function, train_loader, val_loader)
+    train_model(config, model, optimizer, scheduler, loss_function, train_loader, val_loader, device)
     wandb.finish()
