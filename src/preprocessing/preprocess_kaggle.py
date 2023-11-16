@@ -3,8 +3,8 @@ import os
 
 import chess.pgn
 
-kaggle_data_path_raw = os.path.join("data", "raw", "kaggle")
-kaggle_data_path_preprocessed = os.path.join("data", "preprocessed", "kaggle")
+kaggle_data_path_raw = os.path.join("..", "..", "data", "raw", "kaggle")
+kaggle_data_path_preprocessed = os.path.join("..", "..", "data", "preprocessed", "kaggle")
 OUTPUT_FILE_NAME = "kaggle_preprocessed.csv"
 NUMBER_OF_GAMES_TO_PREPROCESS = -1  # set to -1 to preprocess all games
 
