@@ -10,12 +10,15 @@ from torch.utils.data import DataLoader, random_split
 
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.model.ChessmaitMlp1 import ChessmaitMlp1
+from src.model.ChessmaitMlp2 import ChessmaitMlp2
+from src.model.rbf2 import RbfNetwork2
+from src.model.rbf1 import RbfNetwork1
 
 ############################################################
 # This is the central Python script to perform the training
 ############################################################
 
-PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
+PATH_TO_DATAFILE = os.path.join("..", "data", "preprocessed", "kaggle")
 
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
@@ -28,7 +31,10 @@ DATA_FILES = ["kaggle_preprocessed.csv",
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
 
-model = ChessmaitMlp1()
+#model = ChessmaitMlp1()
+#model = ChessmaitMlp2()
+model = RbfNetwork2()
+#model = RbfNetwork1()
 
 
 def get_device():
