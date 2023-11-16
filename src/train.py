@@ -70,7 +70,7 @@ def get_training_configuration() -> argparse.Namespace:
     _config.learning_rate = 0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
-    _config.epochs = 15
+    _config.epochs = 12
     _config.batch_size = 1024
 
     return _config
