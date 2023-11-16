@@ -18,7 +18,7 @@ from src.model.rbf1 import RbfNetwork1
 # This is the central Python script to perform the training
 ############################################################
 
-PATH_TO_DATAFILE = os.path.join("..", "data", "preprocessed", "kaggle")
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
 
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
