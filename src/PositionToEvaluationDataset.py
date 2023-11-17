@@ -15,13 +15,21 @@ def to_tensor(fen_position):
 
 class PositionToEvaluationDataset(Dataset):
     def __init__(self, csv_files, device):
+        print("Loading the data ...")
+
         _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
         self.data = pd.concat(_dataframes, ignore_index=True)
-        self.device = device
 
         # Calculate min and max evaluation scores for normalization
-        self.min_score = self.data['Evaluation'].min()
-        self.max_score = self.data['Evaluation'].max()
+        self.min_score = self.data["Evaluation"].min()
+        self.max_score = self.data["Evaluation"].max()
+
+        # Normalize the evaluation in the range of [0, 1]
+        print("Normalizing the evaluation ...")
+        self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
+
+        print("Converting FEN to tensor ...")
+        self.data["FEN"] = self.data["FEN"].apply(to_tensor)
 
     def __len__(self):
         return len(self.data)
@@ -30,9 +38,6 @@ class PositionToEvaluationDataset(Dataset):
         return self.min_score, self.max_score
 
     def __getitem__(self, idx):
-        x_fen = self.data.iloc[idx, 0]  # FEN position
-
-        x = to_tensor(x_fen)  # Convert string to tensor
+        x = self.data.iloc[idx, 0]  # FEN position
         y = torch.tensor(self.data.iloc[idx, 1], dtype=torch.float32)  # position evaluation
-        y_normalized = (y - self.min_score) / (self.max_score - self.min_score)  # Normalize evaluation
-        return x.to(self.device), y_normalized.to(self.device)
+        return x, y
