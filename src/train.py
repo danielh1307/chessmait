@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, random_split
 
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.model.ChessmaitMlp1 import ChessmaitMlp1
+from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.model.ChessmaitMlp2 import ChessmaitMlp2
 from src.model.rbf2 import RbfNetwork2
 from src.model.rbf1 import RbfNetwork1
@@ -28,12 +29,15 @@ DATA_FILES = ["kaggle_preprocessed.csv",
               "ficsgamesdb_202301_standard2000_nomovetimes_309749.csv",
               "ficsgamesdb_202302_standard2000_nomovetimes_310978.csv"]
 
+# DATA_FILES = ["kaggle_preprocessed_1000.csv"]
+
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
+FEN_TO_TENSOR_METHOD = "fen_to_tensor_one_board"
 
-#model = ChessmaitMlp1()
+model = ChessmaitMlp1()
 #model = ChessmaitMlp2()
-model = RbfNetwork2()
+#model = RbfNetwork2()
 #model = RbfNetwork1()
 
 
@@ -76,8 +80,9 @@ def get_training_configuration() -> argparse.Namespace:
     _config.learning_rate = 0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
-    _config.epochs = 12
+    _config.epochs = 15
     _config.batch_size = 1024
+    _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
 
@@ -130,7 +135,7 @@ def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
                 _optimizer: torch.optim.Adam,
                 _scheduler,
-                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss],
+                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader,
                 _device: str):
@@ -153,11 +158,11 @@ def train_model(_config: argparse.Namespace,
                 print(f"batch {batch_number} from {len(train_loader)} ...")
             batch_number += 1
             _optimizer.zero_grad()
-            predicted_evaluation = _model(position)
+            predicted_evaluation = _model(position.to(_device))
 
             if REGRESSION_TRAINING:
                 evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
-            loss = _loss_function(predicted_evaluation, evaluation)
+            loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
             train_loss += loss.item()
@@ -167,11 +172,11 @@ def train_model(_config: argparse.Namespace,
         val_loss = 0.0
         with torch.no_grad():
             for position, evaluation in _val_loader:
-                predicted_evaluation = _model(position)
+                predicted_evaluation = _model(position.to(_device))
 
                 if REGRESSION_TRAINING:
                     evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
-                loss = _loss_function(predicted_evaluation, evaluation)
+                loss = _loss_function(predicted_evaluation, evaluation.to(_device))
                 val_loss += loss.item()
 
         epoch_result = {"epoch": epoch,
@@ -206,14 +211,15 @@ if __name__ == "__main__":
     config = get_training_configuration()
     train_loader, val_loader, test_loader = get_dataloaders(config, device)
 
-    if WANDB_REPORTING:
-        config.model = type(model).__name__
-        wandb.init(project="chessmait", config=vars(config))
-
     if REGRESSION_TRAINING:
-        loss_function = nn.MSELoss()
+        loss_function = CustomWeightedMSELoss()
     else:
         loss_function = nn.CrossEntropyLoss()
+
+    if WANDB_REPORTING:
+        config.model = type(model).__name__
+        config.loss_function = type(loss_function).__name__
+        wandb.init(project="chessmait", config=vars(config))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
