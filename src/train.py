@@ -87,15 +87,13 @@ def get_training_configuration() -> argparse.Namespace:
     return _config
 
 
-def get_dataloaders(_config: argparse.Namespace, _device: str) -> (DataLoader, DataLoader, DataLoader):
+def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, DataLoader):
     """
 
     Parameters
     ----------
     _config : argparse.Namespace
         configuration values for this training
-    _device : str
-        device on which the tensors are processed
 
     Returns
     -------
@@ -108,7 +106,7 @@ def get_dataloaders(_config: argparse.Namespace, _device: str) -> (DataLoader, D
     for data_file in DATA_FILES:
         csv_files.append(os.path.join(PATH_TO_DATAFILE, data_file))
 
-    dataset = PositionToEvaluationDataset(csv_files, _device)
+    dataset = PositionToEvaluationDataset(csv_files)
     _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
     print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
 
@@ -209,7 +207,7 @@ if __name__ == "__main__":
 
     device = get_device()
     config = get_training_configuration()
-    train_loader, val_loader, test_loader = get_dataloaders(config, device)
+    train_loader, val_loader, test_loader = get_dataloaders(config)
 
     if REGRESSION_TRAINING:
         loss_function = CustomWeightedMSELoss()

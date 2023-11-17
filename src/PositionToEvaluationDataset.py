@@ -14,7 +14,7 @@ def to_tensor(fen_position):
 
 
 class PositionToEvaluationDataset(Dataset):
-    def __init__(self, csv_files, device):
+    def __init__(self, csv_files):
         print("Loading the data ...")
 
         _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
