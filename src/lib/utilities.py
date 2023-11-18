@@ -87,6 +87,51 @@ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
     return result
 
 
+def fen_to_tensor_square_board(fen):
+    """
+    Converts FEN into a tensor of 8x8x12 dimensions representing the board. H x W x Figures
+
+    Parameters
+    ----------
+    fen String input as FEN
+
+    Returns
+    -------
+    Array size  8 (Height) x 8 (Weight) x 12 (Figures 6xWHITE, 6xBLACK).
+    Values are 1 for turn -1 for wait.
+    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+
+    Arrays:
+    0:   Pawn, white
+    1:   Knight, white
+    2:   Bishop, white
+    3:   Rook, white
+    5:   Queen, white
+    6:   King, white
+    7:   Pawn, black
+    8:   Knight, black
+    9:   Bishop, black
+    10:  Rook, black
+    11:  Queen, black
+    12:  Knight, black
+    """
+    board = chess.Board()
+    board.set_fen(fen)
+
+    result = torch.zeros((8, 8, 12))
+    for sq in chess.SQUARES:
+        piece_type = board.piece_type_at(sq)
+        if piece_type != 0:  # Not no color
+            if board.color_at(sq) == chess.WHITE:  # white color on layer 1-6
+                piece_layer = piece_type
+            else:  # black color on layer 6-12
+                piece_layer = int(piece_type or 0) + 6
+            piece_layer = piece_layer - 1
+            result[int(sq / 8), sq % 8, piece_layer] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
+                                       (-1 if board.turn == chess.WHITE else 1)
+    return result
+
+
 def fen_to_tensor_one_board(fen):
     """
     Converts FEN into a tensor of 64x12 dimensions representing the board.
