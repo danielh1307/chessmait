@@ -17,6 +17,7 @@ torchvision = {index = "pytorch",version = "==0.16.0"}
 torchaudio = {index = "pytorch",version = "==2.1.0"}
 wandb = "*"
 pandas = "*"
+seaborn="*"
 
 [dev-packages]
 
