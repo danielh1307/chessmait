@@ -75,8 +75,8 @@ def get_training_configuration() -> argparse.Namespace:
 
     """
     _config = argparse.Namespace()
-    _config.train_percentage = 0.8  # percentage of data which is used for training
-    _config.val_percentage = 0.15  # percentage of data which is used for validation (rest is for testing)
+    _config.train_percentage = 0.85  # percentage of data which is used for training
+    _config.val_percentage = 0.15  # percentage of data which is used for validation
     _config.learning_rate = 0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
@@ -114,8 +114,7 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
 
     train_size = int(_config.train_percentage * len(dataset))
     val_size = int(_config.val_percentage * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
     _config.number_of_evaluations_for_training = train_size
     print(f"Number of training games is {_config.number_of_evaluations_for_training}")
@@ -123,10 +122,9 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     # Create DataLoaders
     _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True)
     _val_loader = DataLoader(val_dataset, batch_size=_config.batch_size, shuffle=False)
-    _test_loader = DataLoader(test_dataset, batch_size=_config.batch_size, shuffle=False)
 
     print("Prepare dataloaders finished ...")
-    return _train_loader, _val_loader, _test_loader
+    return _train_loader, _val_loader
 
 
 def train_model(_config: argparse.Namespace,
@@ -207,7 +205,7 @@ if __name__ == "__main__":
 
     device = get_device()
     config = get_training_configuration()
-    train_loader, val_loader, test_loader = get_dataloaders(config)
+    train_loader, val_loader = get_dataloaders(config)
 
     if REGRESSION_TRAINING:
         loss_function = CustomWeightedMSELoss()
