@@ -6,7 +6,7 @@ import chess.engine
 import chess.pgn
 
 pgn_data_path_raw = os.path.join("data", "raw", "pgn")
-pgn_data_path_preprocessed = os.path.join("data", "preprocessed", "pgn")
+pgn_data_path_preprocessed = os.path.join("data", "preprocessed")
 OUTPUT_FILE_NAME = "ficsgamesdb_202301_standard2000_nomovetimes_309749.csv"
 NUMBER_OF_GAMES_TO_PREPROCESS = 10000  # set to -1 to preprocess all games
 pgn_data_file = "ficsgamesdb_202301_standard2000_nomovetimes_309749.pgn"
