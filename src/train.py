@@ -1,5 +1,6 @@
 import argparse
 import os
+import fnmatch
 from typing import Union
 
 import torch
@@ -28,8 +29,11 @@ DATA_FILES = ["kaggle_preprocessed.csv",
               "ficsgamesdb_2022_standard2000_nomovetimes_310980.csv",
               "ficsgamesdb_202301_standard2000_nomovetimes_309749.csv",
               "ficsgamesdb_202302_standard2000_nomovetimes_310978.csv"]
-
-# DATA_FILES = ["kaggle_preprocessed_1000.csv"]
+# matching_files = [file for file in os.listdir(PATH_TO_DATAFILE) if
+#                   fnmatch.fnmatch(file, "lichess_db_standard_rated_*.csv")]
+# file_names = [os.path.basename(file) for file in matching_files]
+# DATA_FILES.append(file_names)
+# DATA_FILES = ["lichess_db_standard_rated_2023-09.1.1.csv"]
 
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
@@ -76,7 +80,6 @@ def get_training_configuration() -> argparse.Namespace:
     """
     _config = argparse.Namespace()
     _config.train_percentage = 0.85  # percentage of data which is used for training
-    _config.val_percentage = 0.15  # percentage of data which is used for validation
     _config.learning_rate = 0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
@@ -113,7 +116,7 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     torch.manual_seed(42)
 
     train_size = int(_config.train_percentage * len(dataset))
-    val_size = int(_config.val_percentage * len(dataset))
+    val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
     _config.number_of_evaluations_for_training = train_size
@@ -202,6 +205,8 @@ if __name__ == "__main__":
         print("Training on a regression problem ...")
     else:
         print("Training on a classification problem ...")
+
+    print("Training on files " + str(DATA_FILES))
 
     device = get_device()
     config = get_training_configuration()
