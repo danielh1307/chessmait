@@ -20,6 +20,10 @@ class PositionToEvaluationDataset(Dataset):
         _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
         self.data = pd.concat(_dataframes, ignore_index=True)
 
+        # remove mates
+        self.data = self.data[~self.data['Evaluation'].str.startswith('#')]
+        self.data["Evaluation"] = self.data["Evaluation"].astype(int)
+
         # Calculate min and max evaluation scores for normalization
         self.min_score = self.data["Evaluation"].min()
         self.max_score = self.data["Evaluation"].max()
