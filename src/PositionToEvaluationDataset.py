@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+import time
 
 from src.lib.utilities import fen_to_tensor_one_board
 
@@ -19,6 +20,7 @@ class PositionToEvaluationDataset(Dataset):
 
         _dataframes = []
         for csv_file in csv_files:
+            print("Loading ", csv_file)
             # we have some .csv files with Evaluation as string, since the mate
             # is also contained there (e.g. 'mate in 3')
             # we remove those lines and convert the datatype to int
@@ -41,8 +43,12 @@ class PositionToEvaluationDataset(Dataset):
         self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
         print("Converting FEN to tensor ...")
+        start_time = time.time()
         self.data["FEN"] = self.data["FEN"].apply(to_tensor)
+        end_time = time.time()
+        print(f"Done, it took me {end_time - start_time}s to do so ...")
 
+        print("Saving the result as pickle ...")
         self.data["FEN"].to_pickle("./dummy.pkl")
 
     def __len__(self):
