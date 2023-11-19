@@ -17,12 +17,20 @@ class PositionToEvaluationDataset(Dataset):
     def __init__(self, csv_files):
         print("Loading the data ...")
 
-        _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
-        self.data = pd.concat(_dataframes, ignore_index=True)
+        _dataframes = []
+        for csv_file in csv_files:
+            # we have some .csv files with Evaluation as string, since the mate
+            # is also contained there (e.g. 'mate in 3')
+            # we remove those lines and convert the datatype to int
+            _dataframe = pd.read_csv(csv_file)
+            if _dataframe["Evaluation"].dtype == 'object':
+                # remove mates
+                _dataframe = _dataframe[~_dataframe['Evaluation'].str.startswith('#')]
+                _dataframe["Evaluation"] = _dataframe["Evaluation"].astype(int)
+            _dataframes.append(_dataframe)
 
-        # remove mates
-        self.data = self.data[~self.data['Evaluation'].str.startswith('#')]
-        self.data["Evaluation"] = self.data["Evaluation"].astype(int)
+        # _dataframes = [pd.read_csv(csv_file) for csv_file in csv_files]
+        self.data = pd.concat(_dataframes, ignore_index=True)
 
         # Calculate min and max evaluation scores for normalization
         self.min_score = self.data["Evaluation"].min()
@@ -34,6 +42,8 @@ class PositionToEvaluationDataset(Dataset):
 
         print("Converting FEN to tensor ...")
         self.data["FEN"] = self.data["FEN"].apply(to_tensor)
+
+        self.data["FEN"].to_pickle("./dummy.pkl")
 
     def __len__(self):
         return len(self.data)
