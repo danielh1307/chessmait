@@ -160,5 +160,8 @@ cython_debug/
 .idea/
 .run/
 
+best_model.pth
+wandb/
+stockfish/
 src/wandb/
 data/preprocessed/
