@@ -21,19 +21,18 @@ from src.model.rbf1 import RbfNetwork1
 ############################################################
 
 PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
+PATH_TO_PICKLEFILE = os.path.join("data", "pickle")
 
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
-DATA_FILES = ["kaggle_preprocessed.csv",
-              "ficsgamesdb_2022_standard2000_nomovetimes_310980.csv",
-              "ficsgamesdb_202301_standard2000_nomovetimes_309749.csv",
-              "ficsgamesdb_202302_standard2000_nomovetimes_310978.csv"]
-# matching_files = [file for file in os.listdir(PATH_TO_DATAFILE) if
-#                   fnmatch.fnmatch(file, "lichess_db_standard_rated_*.csv")]
+DATA_FILES = []
+PICKLE_FILES = []
+# matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
+#                   fnmatch.fnmatch(file, "*.pkl")]
 # file_names = [os.path.basename(file) for file in matching_files]
-# DATA_FILES.append(file_names)
-# DATA_FILES = ["lichess_db_standard_rated_2023-09.1.1.csv"]
+# for file_name in file_names:
+#     PICKLE_FILES.append(file_name)
 
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
@@ -106,10 +105,14 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     """
     print("Prepare dataloaders ...")
     csv_files = []
+    pickle_files = []
     for data_file in DATA_FILES:
         csv_files.append(os.path.join(PATH_TO_DATAFILE, data_file))
 
-    dataset = PositionToEvaluationDataset(csv_files)
+    for data_file in PICKLE_FILES:
+        pickle_files.append(os.path.join(PATH_TO_PICKLEFILE, data_file))
+
+    dataset = PositionToEvaluationDataset(csv_files, pickle_files)
     _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
     print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
 
