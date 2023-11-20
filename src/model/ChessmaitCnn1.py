@@ -17,12 +17,12 @@ class ChessmaitCnn1(nn.Module):
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(72 * 8 * 8, 1152),
+            nn.Linear(72 * 6 * 6, 324),
             nn.ReLU(),
-            nn.Linear(1152,144),
+            nn.Linear(324, 54),
             nn.ReLU(),
             nn.Dropout(),
-            nn.Linear(144, 1)
+            nn.Linear(54, 1)
         )
 
     def forward(self,x):
