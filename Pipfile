@@ -18,6 +18,7 @@ torchaudio = {index = "pytorch",version = "==2.1.0"}
 wandb = "*"
 pandas = "*"
 seaborn="*"
+scikit-learn="*"
 
 [dev-packages]
 
