@@ -11,25 +11,32 @@ PATH_TO_MODEL = os.path.join("models")
 MODEL_FILE_WHITE = "firm-star-24.pth"
 MODEL_FILE_BLACK = "smart-valley-6.pth"
 
-model_white = ChessmaitMlp1()
-model_white.load_state_dict(torch.load(os.path.join(PATH_TO_MODEL, MODEL_FILE_WHITE)))
-model_white.eval()
-
-model_black = ChessmaitMlp1()
-model_black.load_state_dict(torch.load(os.path.join(PATH_TO_MODEL, MODEL_FILE_BLACK)))
-model_black.eval()
-
 # normalized_evaluation = (evaluation - MIN_EVALUATION) / (MAX_EVALUATION - MIN_EVALUATION)
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
 
-def get_valid_moves_with_evaluation(current_position, is_white):
+
+def get_model_white():
+    model_white = ChessmaitMlp1()
+    model_white.load_state_dict(torch.load(os.path.join(PATH_TO_MODEL, MODEL_FILE_WHITE)))
+    model_white.eval()
+    return model_white
+
+
+def get_model_black():
+    model_black = ChessmaitMlp1()
+    model_black.load_state_dict(torch.load(os.path.join(PATH_TO_MODEL, MODEL_FILE_BLACK)))
+    model_black.eval()
+    return model_black
+
+
+def get_valid_moves_with_evaluation(current_position, model):
     valid_positions = get_valid_positions(current_position)
     dict = {}
     for valid_position in valid_positions:
         t = fen_to_tensor_one_board(valid_position)
         t = t.view(-1, t.size(0))
-        normalized_evaluation = model_white(t) if is_white else model_black(t)
+        normalized_evaluation = model(t)
         evaluation = normalized_evaluation * (MAX_EVALUATION - MIN_EVALUATION) + MIN_EVALUATION
         evaluation = evaluation.item()
         if evaluation in dict:
@@ -38,8 +45,9 @@ def get_valid_moves_with_evaluation(current_position, is_white):
             dict[evaluation] = [valid_position]
     return dict
 
-def get_best_move(current_position, is_white):
-    valid_moves_with_evaluation = get_valid_moves_with_evaluation(current_position, is_white)
+
+def get_best_move(current_position, model, is_white):
+    valid_moves_with_evaluation = get_valid_moves_with_evaluation(current_position, model)
     min_max_eval_key = next(iter(valid_moves_with_evaluation))
     for k in valid_moves_with_evaluation.keys():
         if (is_white and k > min_max_eval_key) or (not is_white and k < min_max_eval_key):
@@ -48,6 +56,14 @@ def get_best_move(current_position, is_white):
         len(valid_moves_with_evaluation[min_max_eval_key]) - 1)
     return min_max_eval_key, valid_moves_with_evaluation[min_max_eval_key][index]
 
+
+def play(board, model, is_white):
+    fen = board.fen()
+    best_move_eval, best_move_fen = get_best_move(fen, model, is_white)
+    board.set_fen(best_move_fen)
+    return best_move_eval
+
+
 def run():
     board = chess.Board()
     board_status = bs.BoardStatus()
@@ -55,18 +71,19 @@ def run():
     stop = False
     do_not_stop = False
     round = 0
-    max_rounds = 10
+    max_rounds = 100
     evals = {True: {}, False: {}}
+
+    model_white = get_model_white()
+    model_black = get_model_black()
 
     while not stop:
         round += 1
         is_white = (round % 2) == 1
         board_status.cache(board)
         print(f"--------------- Round: {round:02d} {'white' if is_white else 'black'}", end='')
-        fen = board.fen()
-        best_move_eval, best_move_fen = get_best_move(fen, is_white)
+        best_move_eval = play(board, model_white if is_white else model_black, is_white)
         print(f" --- eval: {best_move_eval}")
-        board.set_fen(best_move_fen)
         board_status.print(board)
         if not do_not_stop:
             console_input = input("continue/stop/automatic/max-rounds ('Enter'/s/a/#)? ")
@@ -89,6 +106,7 @@ def run():
     print("--------------------------------------------")
     print(f"evaluations white: {evals[True]}")
     print(f"evaluations black: {evals[False]}")
+
 
 if __name__ == "__main__":
     run()
