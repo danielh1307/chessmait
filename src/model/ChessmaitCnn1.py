@@ -7,22 +7,22 @@ class ChessmaitCnn1(nn.Module):
     def __init__(self):
         super(ChessmaitCnn1,self).__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(12, 64, kernel_size=3, padding=1),
+            nn.Conv2d(12, 36, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.Dropout2d(),
-            nn.Conv2d(64, 192, kernel_size=3, padding=1),
+            nn.Conv2d(36, 72, kernel_size=3, padding=0),
             nn.ReLU(),
             nn.Dropout2d(),
         )
 
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(192 * 8 * 8, 4096),
+            nn.Linear(72 * 8 * 8, 1152),
             nn.ReLU(),
-            nn.Linear(4096,256),
+            nn.Linear(1152,144),
             nn.ReLU(),
             nn.Dropout(),
-            nn.Linear(256, 1)
+            nn.Linear(144, 1)
         )
 
     def forward(self,x):
