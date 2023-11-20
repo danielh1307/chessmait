@@ -1,17 +1,60 @@
 import argparse
+import os
 import time
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import torch
+from sklearn.metrics import confusion_matrix
 
 from src.lib.utilities import fen_to_tensor_one_board
-from src.model.ChessmaitMlp1 import ChessmaitMlp1
+from src.model.ChessmaitMlp4 import ChessmaitMlp4
 
+model = ChessmaitMlp4()
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
-MODEL_NAME = "firm-star-24"
+MODEL_NAME = "divine-leaf-29"
+CLASSES = {
+    ">4": {
+        "max": 400
+    },
+    "4>p>2": {
+        "min": 200,
+        "max": 400
+    },
+    "2>p>1": {
+        "min": 100,
+        "max": 200
+    },
+    "1>p>.5": {
+        "min": 50,
+        "max": 100
+    },
+    ".5>p>0": {
+        "min": 0,
+        "max": 50
+    },
+    "0>p>-0.5": {
+        "min": -50,
+        "max": 0
+    },
+    "-0.5>p>-1": {
+        "min": -100,
+        "max": -50
+    },
+    "-1>p>-2": {
+        "min": -200,
+        "max": -100
+    },
+    "-2>p>-4": {
+        "min": -400,
+        "max": -200
+    },
+    "<-4": {
+        "min": -400,
+    }
+}
 
 
 def fen_to_tensor(fen):
@@ -86,21 +129,21 @@ def evaluate_fen_file(fen_file):
 
 
 def evaluation_to_class(evaluation):
-    evaluation = int(evaluation)
-    if evaluation >= 500:
-        return ">5"
-    elif 500 > evaluation >= 300:
-        return "5>p>3"
-    elif 300 > evaluation >= 100:
-        return "3>p>1"
-    elif 100 > evaluation >= -100:
-        return "1>p>-1"
-    elif -100 > evaluation >= -300:
-        return "-1>p>-3"
-    elif -300 > evaluation >= -500:
-        return "-3>p>-5"
-    else:
-        return "<-5"
+    for key, range_dict in CLASSES.items():
+        if "min" in range_dict and "max" in range_dict:
+            min_value = range_dict["min"]
+            max_value = range_dict["max"]
+            if min_value <= evaluation <= max_value:
+                return key
+        elif "min" in range_dict:
+            min_value = range_dict["min"]
+            if evaluation < min_value:
+                return key
+        elif "max" in range_dict:
+            max_value = range_dict["max"]
+            if evaluation >= max_value:
+                return key
+    raise Exception(f"No class found for {evaluation}")
 
 
 def add_classes(fen_file):
@@ -123,22 +166,30 @@ def write_values_in_bars(curr_plot):
                            textcoords='offset points')
 
 
-def create_statistics(fen_file_evaluated):
-    df = pd.read_csv(fen_file_evaluated)
+def create_statistics(fen_directory_evaluated):
+    dfs = []
+    for fen_file_evaluated in os.listdir(fen_directory_evaluated):
+        if not fen_file_evaluated.endswith(".csv"):
+            continue
+        print(f"Reading file {fen_file_evaluated} ...")
+        _df = pd.read_csv(os.path.join(fen_directory_evaluated, fen_file_evaluated))
+        if _df["Evaluation"].dtype == 'object':
+            # filter the mates
+            _df = _df[~_df['Evaluation'].str.startswith('#')]
+        _df["Evaluation"] = _df["Evaluation"].astype(int)
+        _df["Evaluation_Predicted"] = _df["Evaluation_Predicted"].astype(int)
+        dfs.append(_df)
 
-    # filter the mates
-    df = df[~df['Evaluation'].str.startswith('#')]
-    df["Evaluation"] = df["Evaluation"].astype(int)
-    df["Evaluation_Predicted"] = df["Evaluation_Predicted"].astype(int)
+    df = pd.concat(dfs, ignore_index=True)
 
-    print(f"Creating statistics for {fen_file_evaluated}, wich are {len(df)} positions ...")
+    print(f"Creating statistics for {fen_directory_evaluated}, which are {len(df)} positions ...")
 
     # add class labels
     df["Evaluated_Class"] = df["Evaluation"].apply(evaluation_to_class)
     df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(evaluation_to_class)
 
     # Create a figure with two subplots side by side
-    fig, axes = plt.subplots(7, 2, figsize=(42, 24))
+    fig, axes = plt.subplots(9, 2, figsize=(42, 24))
 
     ##########################################################################
     # Plot: show distribution of true classes (absolute)
@@ -198,7 +249,7 @@ def create_statistics(fen_file_evaluated):
     ##########################################################################
     # Plot: for each true label, show the predictions of the model
     ##########################################################################
-    class_labels = ["MATE", ">5", "5>p>3", "3>p>1", "1>p>-1", "-1>p>-3", "-3>p>-5", "<-5"]
+    class_labels = list(CLASSES.keys())
     curr_x = 3
     curr_y = 0
     for class_label in class_labels:
@@ -206,17 +257,24 @@ def create_statistics(fen_file_evaluated):
         curr_x = curr_x if curr_y == 0 else curr_x + 1
         curr_y = 1 if curr_y == 0 else 0
 
-        curr_plot = sns.countplot(x='Evaluated_Class_Predicted', data=df[df["Evaluated_Class"] == class_label], ax=plot_axes)
+        curr_plot = sns.countplot(x='Evaluated_Class_Predicted', data=df[df["Evaluated_Class"] == class_label],
+                                  ax=plot_axes)
         plot_axes.set_title(f'Distribution of Predicted Classes for True Class {class_label}')
         plot_axes.set_xlabel('Class Label')
         plot_axes.set_ylabel('Frequency')
         write_values_in_bars(curr_plot)
 
+    plot_axes = axes[8, 0]
+    cm = confusion_matrix(df["Evaluated_Class"], df["Evaluated_Class_Predicted"], labels=class_labels)
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, ax=plot_axes, xticklabels=class_labels,
+                yticklabels=class_labels)
+    plot_axes.set_title("Confusion Matrix")
+    plot_axes.set_xlabel("Predicted Classes")
+    plot_axes.set_ylabel("True Classes")
+
     plt.tight_layout()
-    # plt.show()
 
     plt.savefig('plot.png', bbox_inches='tight')
-    # fig.savefig("out.png")
 
 
 if __name__ == "__main__":
@@ -228,7 +286,6 @@ if __name__ == "__main__":
     parser.add_argument("--add-classes", type=str, required=False)
     args = parser.parse_args()
 
-    model = ChessmaitMlp1()
     model.to("cuda")
     model.load_state_dict(torch.load(f"models/{MODEL_NAME}.pth"))
     model.eval()
