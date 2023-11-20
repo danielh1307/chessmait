@@ -9,24 +9,32 @@ class ChessmaitCnn1(nn.Module):
         self.features = nn.Sequential(
             nn.Conv2d(12, 64, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Dropout2d(),
             nn.Conv2d(64, 192, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Dropout2d(),
             nn.Conv2d(192, 384, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Dropout2d(),
             nn.Conv2d(384, 256, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Dropout2d(),
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Dropout2d(),
         )
 
         self.classifier = nn.Sequential(
-            nn.Dropout(0.5),
+            nn.Dropout(),
             nn.Linear(256 * 8 * 8, 4096),
             nn.ReLU(),
             nn.Dropout(),
             nn.Linear(4096, 4096),
-            nn.ReLU(0.5),
-            nn.Linear(4096, 1)
+            nn.ReLU(),
+            nn.Linear(4096,256),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(256, 1)
         )
 
     def forward(self,x):
