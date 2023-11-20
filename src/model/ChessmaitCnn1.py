@@ -20,12 +20,12 @@ class ChessmaitCnn1(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Dropout(),
+            nn.Dropout(0.5),
             nn.Linear(256 * 8 * 8, 4096),
             nn.ReLU(),
             nn.Dropout(),
             nn.Linear(4096, 4096),
-            nn.ReLU(),
+            nn.ReLU(0.5),
             nn.Linear(4096, 1)
         )
 

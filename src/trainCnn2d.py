@@ -29,11 +29,11 @@ PATH_TO_PICKLEFILE = os.path.join("data", "pickle")
 ############################################################################
 DATA_FILES = []
 PICKLE_FILES = []
-# matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
-#                   fnmatch.fnmatch(file, "*.pkl")]
-# file_names = [os.path.basename(file) for file in matching_files]
-# for file_name in file_names:
-#     PICKLE_FILES.append(file_name)
+matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
+                  fnmatch.fnmatch(file, "*.pkl")]
+file_names = [os.path.basename(file) for file in matching_files]
+for file_name in file_names:
+    PICKLE_FILES.append(file_name)
 
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
