@@ -50,7 +50,9 @@ def preprocess_regression_to_evaluation(evaluated_regression_file):
     df["Evaluated_Class"] = df["Evaluation"].apply(evaluation_to_class)
     df = df.drop(columns=['Evaluation'])
 
-    df.to_csv(os.path.join(directory_preprocessed_classification, evaluated_regression_file), index=False)
+    out_file = os.path.join(directory_preprocessed_classification, evaluated_regression_file)
+    df.to_csv(out_file, index=False)
+    print(f"File written to {out_file}")
 
 
 if __name__ == "__main__":
