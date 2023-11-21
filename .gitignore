@@ -166,3 +166,4 @@ stockfish/
 src/wandb/
 data/preprocessed/
 data/pickle/
+/data/saved/
