@@ -1,6 +1,5 @@
 import argparse
 import os
-import fnmatch
 from typing import Union
 
 import torch
@@ -9,25 +8,23 @@ import wandb
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 
-from src.PositionToEvaluationDataset import PositionToEvaluationDataset
-from src.model.ChessmaitMlp1 import ChessmaitMlp1
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
-from src.model.ChessmaitMlp2 import ChessmaitMlp2
-from src.model.rbf2 import RbfNetwork2
-from src.model.rbf1 import RbfNetwork1
+from src.PositionToEvaluationDataset import PositionToEvaluationDataset
+from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
+from src.model.ChessmaitCnn5 import ChessmaitCnn5
 
 ############################################################
 # This is the central Python script to perform the training
 ############################################################
 
-PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
-PATH_TO_PICKLEFILE = os.path.join("data", "pickle")
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
+PATH_TO_PICKLEFILE = os.path.join("data", "pickle-classification-fen-to-cnn-tensor-alternative")
 
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
+PICKLE_FILES = ["kaggle_preprocessed_20000.pkl"]
 DATA_FILES = []
-PICKLE_FILES = []
 # matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
 #                   fnmatch.fnmatch(file, "*.pkl")]
 # file_names = [os.path.basename(file) for file in matching_files]
@@ -35,13 +32,14 @@ PICKLE_FILES = []
 #     PICKLE_FILES.append(file_name)
 
 WANDB_REPORTING = False
-REGRESSION_TRAINING = True
-FEN_TO_TENSOR_METHOD = "fen_to_tensor_one_board"
+REGRESSION_TRAINING = False
+FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_alternative"
 
-model = ChessmaitMlp1()
-#model = ChessmaitMlp2()
-#model = RbfNetwork2()
-#model = RbfNetwork1()
+model = ChessmaitCnn5()
+
+
+# model = RbfNetwork2()
+# model = RbfNetwork1()
 
 
 def get_device():
@@ -80,10 +78,17 @@ def get_training_configuration() -> argparse.Namespace:
     _config = argparse.Namespace()
     _config.train_percentage = 0.85  # percentage of data which is used for training
     _config.learning_rate = 0.001
+
+    # for Adam optimizer
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
-    _config.epochs = 15
-    _config.batch_size = 1024
+
+    # for SGD optimizer
+    # _config.momentum = 0.7
+    # _config.weight_decay = 1e-8
+
+    _config.epochs = 10
+    _config.batch_size = 256
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -112,9 +117,12 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     for data_file in PICKLE_FILES:
         pickle_files.append(os.path.join(PATH_TO_PICKLEFILE, data_file))
 
-    dataset = PositionToEvaluationDataset(csv_files, pickle_files)
-    _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
-    print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
+    if REGRESSION_TRAINING:
+        dataset = PositionToEvaluationDataset(csv_files, pickle_files)
+        _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
+        print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
+    else:
+        dataset = PositionToEvaluationDatasetClassification(csv_files, pickle_files)
 
     torch.manual_seed(42)
 
@@ -135,7 +143,7 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
 
 def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
-                _optimizer: torch.optim.Adam,
+                _optimizer: Union[torch.optim.Adam, torch.optim.SGD],
                 _scheduler,
                 _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
                 _train_loader: DataLoader,
@@ -163,7 +171,7 @@ def train_model(_config: argparse.Namespace,
             predicted_evaluation = _model(position.to(_device))
 
             if REGRESSION_TRAINING:
-                evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
+                evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
             loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
@@ -177,7 +185,7 @@ def train_model(_config: argparse.Namespace,
                 predicted_evaluation = _model(position.to(_device))
 
                 if REGRESSION_TRAINING:
-                    evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
+                    evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
                 loss = _loss_function(predicted_evaluation, evaluation.to(_device))
                 val_loss += loss.item()
 
@@ -216,7 +224,8 @@ if __name__ == "__main__":
     train_loader, val_loader = get_dataloaders(config)
 
     if REGRESSION_TRAINING:
-        loss_function = CustomWeightedMSELoss()
+        # loss_function = CustomWeightedMSELoss()
+        loss_function = nn.MSELoss()
     else:
         loss_function = nn.CrossEntropyLoss()
 
@@ -225,7 +234,12 @@ if __name__ == "__main__":
         config.loss_function = type(loss_function).__name__
         wandb.init(project="chessmait", config=vars(config))
 
+    # Adam optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
+
+    # SGD optimier
+    # optimizer = optim.SGD(model.parameters(), lr=config.learning_rate, momentum=config.momentum,
+    #                       weight_decay=config.weight_decay)
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model
     scheduler = ReduceLROnPlateau(optimizer, 'min')  # 'min' means reducing the LR when the metric stops decreasing
