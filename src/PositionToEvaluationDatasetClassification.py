@@ -22,6 +22,11 @@ class PositionToEvaluationDatasetClassification(Dataset):
             raise Exception("Either choose .csv files or .pkl files to load")
 
         _dataframes = []
+        if load_pickle:
+            for pickle_file in pickle_files:
+                print("Loading ", pickle_file, " ...")
+                _dataframe = pd.read_pickle(pickle_file)
+                _dataframes.append(_dataframe)
         if load_csv:
             for csv_file in csv_files:
                 print("Loading ", csv_file, " ...")
