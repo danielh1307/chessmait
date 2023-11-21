@@ -2,36 +2,44 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from src.lib.utilities import fen_to_tensor, CLASS_WIN, CLASS_DRAW, CLASS_LOSS
+from src.lib.utilities import fen_to_cnn_tensor
 
 
 #########################################################################
 # This class is a dataset which reads .csv files with
-# (FEN) positions and an evaluation.
+# (FEN) positions and evaluated classes.
 #########################################################################
 def to_tensor(fen_position):
-    return fen_to_tensor(fen_position)
-
-
-def evaluation_to_class(y):
-    if y > 150:
-        return CLASS_WIN
-    elif y < -150:
-        return CLASS_LOSS
-    else:
-        return CLASS_DRAW
+    return fen_to_cnn_tensor(fen_position)
 
 
 class PositionToEvaluationDatasetClassification(Dataset):
-    def __init__(self, csv_file):
-        self.data = pd.read_csv(csv_file)
+    def __init__(self, csv_files, pickle_files):
+        load_csv = len(csv_files) > 0
+        load_pickle = len(pickle_files) > 0
+
+        if load_csv and load_pickle:
+            raise Exception("Either choose .csv files or .pkl files to load")
+
+        _dataframes = []
+        if load_csv:
+            for csv_file in csv_files:
+                print("Loading ", csv_file, " ...")
+                _dataframe = pd.read_csv(csv_file)
+                _dataframes.append(_dataframe)
+
+        self.data = pd.concat(_dataframes, ignore_index=True)
+
+        if load_csv:
+            print("Converting FEN to tensor ...")
+            self.data["FEN"] = self.data["FEN"].apply(to_tensor)
+
+        print("All data loaded ...")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        x_fen = self.data.iloc[idx, 0]  # FEN position
-
-        x = to_tensor(x_fen)  # Convert string to tensor
-        y = torch.tensor(evaluation_to_class(self.data.iloc[idx, 1]), dtype=torch.long)
+        x = self.data.iloc[idx, 0]  # FEN position
+        y = torch.tensor(self.data.iloc[idx, 1], dtype=torch.long) # class position
         return x, y
