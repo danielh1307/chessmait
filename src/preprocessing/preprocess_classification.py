@@ -16,7 +16,7 @@ CLASSES = {
     },
     "WIN_BLACK": {
         "max": -150,
-        "label": 10
+        "label": 2
     }
 }
 
