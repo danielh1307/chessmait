@@ -165,4 +165,8 @@ wandb/
 stockfish/
 src/wandb/
 data/preprocessed/
-data/pickle/
+data/pickle-fen-to-tensor-one-board/
+data/pickle-classification-fen-to-cnn-tensor-alternative
+data/pickle-classification-fen-to-tensor-one-board
+data/preprocessed-classification
+data/test
