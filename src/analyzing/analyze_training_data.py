@@ -30,6 +30,9 @@ def analyze_files(file_pattern):
 
     df = pd.concat(_dataframes, ignore_index=True)
 
+    fens = df["FEN"]
+    print(f"I have {len(df[fens.isin(fens[fens.duplicated()])])} duplicate values")
+
     # Create a figure with two subplots side by side
     fig, axes = plt.subplots(1, 2, figsize=(24, 12))
 
