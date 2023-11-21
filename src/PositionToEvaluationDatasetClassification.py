@@ -2,7 +2,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from src.lib.utilities import fen_to_cnn_tensor
+from src.lib.utilities import fen_to_cnn_tensor_alternative
 
 
 #########################################################################
@@ -10,7 +10,7 @@ from src.lib.utilities import fen_to_cnn_tensor
 # (FEN) positions and evaluated classes.
 #########################################################################
 def to_tensor(fen_position):
-    return fen_to_cnn_tensor(fen_position)
+    return fen_to_cnn_tensor_alternative(fen_position)
 
 
 class PositionToEvaluationDatasetClassification(Dataset):
