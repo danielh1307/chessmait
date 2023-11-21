@@ -1,4 +1,5 @@
 import argparse
+import fnmatch
 import os
 from typing import Union
 
@@ -13,57 +14,10 @@ from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.model.ChessmaitCnn5 import ChessmaitCnn5
 
+
 ############################################################
 # This is the central Python script to perform the training
 ############################################################
-
-PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
-PATH_TO_PICKLEFILE = os.path.join("data", "pickle-classification-fen-to-cnn-tensor-alternative")
-
-############################################################################
-# Make sure these parameters are correctly set before you start the training
-############################################################################
-PICKLE_FILES = ["kaggle_preprocessed_20000.pkl"]
-DATA_FILES = []
-# matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
-#                   fnmatch.fnmatch(file, "*.pkl")]
-# file_names = [os.path.basename(file) for file in matching_files]
-# for file_name in file_names:
-#     PICKLE_FILES.append(file_name)
-
-WANDB_REPORTING = False
-REGRESSION_TRAINING = False
-FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_alternative"
-
-model = ChessmaitCnn5()
-
-
-# model = RbfNetwork2()
-# model = RbfNetwork1()
-
-
-def get_device():
-    """
-    Checks which device is most appropriate to perform the training.
-    If cuda is available, cuda is returned, otherwise mps or cpu.
-
-    Returns
-    -------
-    str
-        the device which is used to perform the training.
-
-    """
-    _device = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
-
-    print(f"For this training, we are going to use {_device} device ...")
-    return _device
-
 
 def get_training_configuration() -> argparse.Namespace:
     """
@@ -92,6 +46,60 @@ def get_training_configuration() -> argparse.Namespace:
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
+
+
+#################################################################################################
+# Make sure to set those values correctly before starting your training
+#################################################################################################
+# Datafiles to load
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
+PATH_TO_PICKLEFILE = os.path.join("data", "pickle-classification-fen-to-cnn-tensor-alternative")
+PICKLE_FILES = ["kaggle_preprocessed_20000.pkl"]
+DATA_FILES = []
+
+WANDB_REPORTING = False
+REGRESSION_TRAINING = False
+FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_alternative"
+
+# Model, loss function, optimizer
+config = get_training_configuration()
+model = ChessmaitCnn5()
+loss_function = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
+
+
+#################################################################################################
+
+def get_device():
+    """
+    Checks which device is most appropriate to perform the training.
+    If cuda is available, cuda is returned, otherwise mps or cpu.
+
+    Returns
+    -------
+    str
+        the device which is used to perform the training.
+
+    """
+    _device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )
+
+    print(f"For this training, we are going to use {_device} device ...")
+    return _device
+
+
+def get_files_from_pattern():
+    # use this method to load files from a specific pattern
+    matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
+                      fnmatch.fnmatch(file, "*.pkl")]
+    file_names = [os.path.basename(file) for file in matching_files]
+    for file_name in file_names:
+        PICKLE_FILES.append(file_name)
 
 
 def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, DataLoader):
@@ -220,26 +228,14 @@ if __name__ == "__main__":
     print("Training on files " + str(DATA_FILES))
 
     device = get_device()
-    config = get_training_configuration()
-    train_loader, val_loader = get_dataloaders(config)
 
-    if REGRESSION_TRAINING:
-        # loss_function = CustomWeightedMSELoss()
-        loss_function = nn.MSELoss()
-    else:
-        loss_function = nn.CrossEntropyLoss()
+    train_loader, val_loader = get_dataloaders(config)
 
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
         wandb.init(project="chessmait", config=vars(config))
 
-    # Adam optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
-
-    # SGD optimier
-    # optimizer = optim.SGD(model.parameters(), lr=config.learning_rate, momentum=config.momentum,
-    #                       weight_decay=config.weight_decay)
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model
     scheduler = ReduceLROnPlateau(optimizer, 'min')  # 'min' means reducing the LR when the metric stops decreasing
