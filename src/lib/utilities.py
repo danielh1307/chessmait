@@ -55,7 +55,9 @@ def fen_to_tensor(fen):
     Array size  12 (Figures 6xWHITE, 6xBLACK) 8x8 (board). First 12 values represent the figures.
     For each color and type, there is an array of 64 fields.
     Values are 1 for turn -1 for wait.
-PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+
+    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+
     Arrays:
     0:   Pawn, white
     1:   Knight, white
@@ -83,13 +85,14 @@ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
             result[piece_layer, sq] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
-                                      (-1 if board.turn == chess.WHITE else 1)
+                                     (-1 if board.turn == chess.WHITE else 1)
     return result
 
 
 def fen_to_cnn_tensor(fen):
     """
-    Converts FEN into a tensor of 1x12x8x8 dimensions representing the board. Figures x H x W (C, H, W according to Conv2d).
+    Converts FEN into a tensor of 1x12x8x8 dimensions representing the board. Figures x H x W (C, H, W according to
+    Conv2d).
 
     Parameters
     ----------
@@ -128,7 +131,42 @@ def fen_to_cnn_tensor(fen):
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
             result[piece_layer, int(sq / 8), sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
-                                       (-1 if board.turn == chess.WHITE else 1)
+                                                     (1 if board.turn == chess.WHITE else -1)
+    return result
+
+
+def fen_to_cnn_tensor_non_hot_enc(fen):
+    """
+    Converts FEN into a tensor of 8x8 dimensions representing the board. 1 x H x W (C, H, W according to Conv2d).
+
+    Parameters
+    ----------
+    fen String input as FEN
+
+    Returns
+    -------
+    Array size 8 (Height) x 8 (Weight).
+    Values are positive for turn and negative for wait.
+    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+
+    Figures:
+    0:   No figure
+    1:   Pawn
+    2:   Knight
+    3:   Bishop
+    4:   Rook
+    5:   Queen
+    6:   King
+    """
+    board = chess.Board()
+    board.set_fen(fen)
+
+    result = torch.zeros((8, 8))
+    for sq in chess.SQUARES:
+        piece_type = int(board.piece_type_at(sq) or 0)
+        if piece_type != 0:  # Not no color
+            result[int(sq / 8), sq % 8] = piece_type * (
+                1 if board.turn == chess.WHITE else -1) * (1 if board.color_at(sq) == chess.WHITE else -1)
     return result
 
 
@@ -208,7 +246,7 @@ def fen_to_cnn_tensor_alternative(fen):
 
 
 def main():
-    tensor = fen_to_tensor("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    tensor = fen_to_cnn_tensor_non_hot_enc("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
     print(tensor)
 
 
