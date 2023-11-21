@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, random_split
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
+from src.model.ChessmaitMlp5 import ChessmaitMlp5
 from src.model.ChessmaitCnn5 import ChessmaitCnn5
 
 
@@ -52,18 +53,22 @@ def get_training_configuration() -> argparse.Namespace:
 # Make sure to set those values correctly before starting your training
 #################################################################################################
 # Datafiles to load
-PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
-PATH_TO_PICKLEFILE = os.path.join("data", "pickle-classification-fen-to-cnn-tensor-alternative")
-PICKLE_FILES = ["kaggle_preprocessed_20000.pkl"]
-DATA_FILES = []
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
+PATH_TO_PICKLEFILE = os.path.join("data", "preprocessed")
+# set either PICKLE_FILES or DATA_FILES
+# PICKLE_FILES: contains already the correct tensors
+# DATA_FILES: contains FEN position, tensors have to be created
+PICKLE_FILES = []
+# PICKLE_FILES = ["lichess_db_standard_rated_2023-09.1.1.pkl"]
+DATA_FILES = ["kaggle_preprocessed_1000.csv"]
 
 WANDB_REPORTING = False
-REGRESSION_TRAINING = False
-FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_alternative"
+REGRESSION_TRAINING = True
+FEN_TO_TENSOR_METHOD = "fen_to_tensor_one_board"  # just for documentation
 
 # Model, loss function, optimizer
 config = get_training_configuration()
-model = ChessmaitCnn5()
+model = ChessmaitMlp5()
 loss_function = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
 
