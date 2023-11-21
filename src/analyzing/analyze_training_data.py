@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+# Helper script to analyze training data, mainly based on classification
+# It creates seaborn plots of the given .csv files.
+
+
 PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
 
 
@@ -30,9 +34,6 @@ def analyze_files(file_pattern):
 
     df = pd.concat(_dataframes, ignore_index=True)
 
-    fens = df["FEN"]
-    print(f"I have {len(df[fens.isin(fens[fens.duplicated()])])} duplicate values")
-
     # Create a figure with two subplots side by side
     fig, axes = plt.subplots(1, 2, figsize=(24, 12))
 
@@ -56,7 +57,7 @@ def analyze_files(file_pattern):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create classification files from regression files")
+    parser = argparse.ArgumentParser(description="Analyze training data")
 
     parser.add_argument("--file-pattern", type=str, required=True)
     args = parser.parse_args()

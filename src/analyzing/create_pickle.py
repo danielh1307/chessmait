@@ -5,6 +5,10 @@ import time
 import pandas as pd
 
 from src.lib.utilities import fen_to_tensor_one_board
+
+# Helper script to create a pickle dataframe with the tensors
+# already created, since that takes a lot of time
+
 PATH_TO_DATAFILE = os.path.join("data", "preprocessed-classification")
 PATH_TO_PICKLEFILE = os.path.join("data", "pickle-classification-fen-to-tensor-one-board")
 

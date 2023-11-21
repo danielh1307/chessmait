@@ -11,10 +11,16 @@ from sklearn.metrics import confusion_matrix
 from src.lib.utilities import fen_to_tensor_one_board
 from src.model.ChessmaitMlp4 import ChessmaitMlp4
 
+# Helper script for different actions in the context of regression models.
+# See the documentation of the arguments for more information.
+
+# Adjust these values for your needs
+# The MAX_EVALUATION and MIN_EVALUATION can be taken from wandb
 model = ChessmaitMlp4()
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
 MODEL_NAME = "divine-leaf-29"
+
 CLASSES = {
     ">4": {
         "max": 400
@@ -57,6 +63,29 @@ CLASSES = {
 }
 
 
+def get_device():
+    """
+    Checks which device is most appropriate to perform the training.
+    If cuda is available, cuda is returned, otherwise mps or cpu.
+
+    Returns
+    -------
+    str
+        the device which is used to perform the training.
+
+    """
+    _device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )
+
+    print(f"For this training, we are going to use {_device} device ...")
+    return _device
+
+
 def fen_to_tensor(fen):
     return fen_to_tensor_one_board(fen)
 
@@ -65,27 +94,27 @@ def reverse_normalization(normalized_evaluation):
     return normalized_evaluation * (MAX_EVALUATION - MIN_EVALUATION) + MIN_EVALUATION
 
 
-def evaluate_fen_by_model(fen_list):
-    batch_tensors = [fen_to_tensor(fen).to("cuda") for fen in fen_list]
+def evaluate_fen_by_model(fen_list, device):
+    batch_tensors = [fen_to_tensor(fen).to(device) for fen in fen_list]
 
     with torch.no_grad():
         input_batch = torch.stack(batch_tensors)
         return model(input_batch)
 
 
-def evaluate_fen_command_line():
+def evaluate_fen_command_line(device):
     while True:
         fen = input("What is your FEN?")
         if fen == "q":
             break
 
-        output = evaluate_fen_by_model([fen])
+        output = evaluate_fen_by_model([fen], device)
 
         print(f"My evaluation is: {output}")
         print(f"My evaluation normalized is: {reverse_normalization(output.item())}")
 
 
-def evaluate_fen_file(fen_file):
+def evaluate_fen_file(fen_file, device):
     # init some values
     batch_size = 5000
     current_idx = 0
@@ -107,7 +136,7 @@ def evaluate_fen_file(fen_file):
         fen_batch = df['FEN'].iloc[start_idx:end_idx].tolist()
 
         # Call evaluate_fen_by_model with the batch of FEN values
-        results = evaluate_fen_by_model(fen_batch)
+        results = evaluate_fen_by_model(fen_batch, device)
 
         all_results.extend(results.tolist())
 
@@ -278,23 +307,31 @@ def create_statistics(fen_directory_evaluated):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluation helper for Chessmait")
+    parser = argparse.ArgumentParser(description="Chessmait regression evaluator")
 
+    # if set to true, we get a command line, and we can evaluate single FEN positions
     parser.add_argument("--fen-evaluation", action='store_true', required=False)
+
+    # we can predict all the values in the given file
     parser.add_argument("--fen-evaluation-file", type=str, required=False)
+
+    # we can create statistics based on a predicted .csv file
     parser.add_argument("--statistics", type=str, required=False)
+
+    # we can add class labels to a predicted .csv file
     parser.add_argument("--add-classes", type=str, required=False)
     args = parser.parse_args()
 
-    model.to("cuda")
+    device = get_device()
+    model.to(device)
     model.load_state_dict(torch.load(f"models/{MODEL_NAME}.pth"))
     model.eval()
 
     if args.fen_evaluation:
-        evaluate_fen_command_line()
+        evaluate_fen_command_line(device)
     elif args.statistics:
         create_statistics(args.statistics)
     elif args.add_classes:
         add_classes(args.add_classes)
     elif args.fen_evaluation_file:
-        evaluate_fen_file(args.fen_evaluation_file)
+        evaluate_fen_file(args.fen_evaluation_file, device)
