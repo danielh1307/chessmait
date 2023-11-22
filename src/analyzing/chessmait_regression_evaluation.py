@@ -18,9 +18,13 @@ from src.model.ChessmaitMlp5 import ChessmaitMlp5
 # Adjust these values for your needs
 # The MAX_EVALUATION and MIN_EVALUATION can be taken from wandb
 model = ChessmaitMlp5()
+NORMALIZATION_USED = False
 MAX_EVALUATION = 15265
 MIN_EVALUATION = -15265
-MODEL_NAME = "toast-monkey-69"
+CLIPPING_USED = True
+MAX_CLIPPING = 1500
+MIN_CLIPPING = 1500
+MODEL_NAME = "giddy-fog-71"
 
 CLASSES = {
     ">4": {
@@ -112,7 +116,8 @@ def evaluate_fen_command_line(device):
         output = evaluate_fen_by_model([fen], device)
 
         print(f"My evaluation is: {output}")
-        print(f"My evaluation normalized is: {reverse_normalization(output.item())}")
+        if NORMALIZATION_USED:
+            print(f"My evaluation normalized is: {reverse_normalization(output.item())}")
 
 
 def evaluate_fen_file(fen_file, device):
@@ -147,11 +152,21 @@ def evaluate_fen_file(fen_file, device):
 
     end_time = time.time()
     print(
-        f" ...done, it took me {end_time - start_time}s to do this and I now have {len(all_results)} evaluated results (normalized)")
-    df['Evaluation_Predicted_Normalized'] = [result[0] for result in all_results]
+        f" ...done, it took me {end_time - start_time}s to do this and I now have {len(all_results)} predicted results")
+    df['Evaluation_Predicted_Original'] = [result[0] for result in all_results]
 
-    print(f"Un-normalizing the results ...")
-    df['Evaluation_Predicted'] = df['Evaluation_Predicted_Normalized'].apply(reverse_normalization)
+    if NORMALIZATION_USED:
+        print(f"Un-normalizing the results ...")
+        df['Evaluation_Predicted'] = df['Evaluation_Predicted_Original'].apply(reverse_normalization)
+
+    if CLIPPING_USED:
+        # we "clip" both the true values and the predicted values
+        if df["Evaluation"].dtype == 'object':
+            # filter the mates
+            _df = df[~df['Evaluation'].str.startswith('#')]
+            df["Evaluation"] = df["Evaluation"].astype(int)
+        df["Evaluation"] = df["Evaluation"].clip(lower=-1500, upper=1500)
+        df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=-1500, upper=1500)
 
     output_file_name = f"{fen_file[0:-4]}_evaluated_{MODEL_NAME}.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
@@ -235,7 +250,7 @@ def create_statistics(fen_directory_evaluated):
     write_values_in_bars(curr_plot)
 
     ##########################################################################
-    # Plot: show distribution of predicted classes (absolute)
+    # Plot: show distribution of predicted classes (percentage)
     ##########################################################################
     plot_axes = axes[1, 1]
     percentage_values = (df['Evaluated_Class_Predicted'].value_counts() / len(df)) * 100
@@ -302,6 +317,9 @@ def create_statistics(fen_directory_evaluated):
 
 
 if __name__ == "__main__":
+    if CLIPPING_USED and NORMALIZATION_USED:
+        raise Exception("Don't use clipping and normalization at the same time ...")
+
     parser = argparse.ArgumentParser(description="Chessmait regression evaluator")
 
     # if set to true, we get a command line, and we can evaluate single FEN positions
