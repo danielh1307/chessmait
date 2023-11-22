@@ -163,7 +163,7 @@ def evaluate_fen_file(fen_file, device):
         # we "clip" both the true values and the predicted values
         if df["Evaluation"].dtype == 'object':
             # filter the mates
-            _df = df[~df['Evaluation'].str.startswith('#')]
+            df = df[~df['Evaluation'].str.startswith('#')]
             df["Evaluation"] = df["Evaluation"].astype(int)
         df["Evaluation"] = df["Evaluation"].clip(lower=-1500, upper=1500)
         df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=-1500, upper=1500)
