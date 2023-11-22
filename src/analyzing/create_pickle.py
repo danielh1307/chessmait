@@ -23,6 +23,10 @@ file_names = [os.path.basename(file) for file in matching_files]
 for file_name in file_names:
     df = pd.read_csv(os.path.join(PATH_TO_DATAFILE, file_name))
 
+    if df["Evaluation"].dtype == 'object':
+        df = df[~df['Evaluation'].str.startswith('#')]
+        df["Evaluation"] = df["Evaluation"].astype(int)
+
     print("Converting FEN to tensor ...")
     start_time = time.time()
     df["FEN"] = df["FEN"].apply(to_tensor)
