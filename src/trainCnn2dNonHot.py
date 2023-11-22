@@ -23,17 +23,17 @@ PATH_TO_PICKLEFILE = os.path.join("data", "pickle")
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
-DATA_FILES = ["kaggle_preprocessed_100.csv"]
+DATA_FILES = []
 PICKLE_FILES = []
-# matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
-#                   fnmatch.fnmatch(file, "*.pkl")]
-# file_names = [os.path.basename(file) for file in matching_files]
-# for file_name in file_names:
-#     PICKLE_FILES.append(file_name)
+matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
+                  fnmatch.fnmatch(file, "*.pkl")]
+file_names = [os.path.basename(file) for file in matching_files]
+for file_name in file_names:
+    PICKLE_FILES.append(file_name)
 
-WANDB_REPORTING = False
+WANDB_REPORTING = True
 REGRESSION_TRAINING = True
-FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_non_hot_enc"
+FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor"
 
 model = ChessmaitCnn2NonHot()
 
@@ -78,7 +78,7 @@ def get_training_configuration() -> argparse.Namespace:
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
     _config.epochs = 15
-    _config.batch_size = 256
+    _config.batch_size = 1024
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -174,7 +174,11 @@ def train_model(_config: argparse.Namespace,
                 if REGRESSION_TRAINING:
                     evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
                 loss = _loss_function(predicted_evaluation, evaluation.to(_device))
-                val_loss += loss.item()
+                val_loss += loss.item() * position.size(0)
+
+        # calculate average losses
+        train_loss = train_loss / len(_train_loader.dataset)
+        val_loss = val_loss / len(_val_loader.dataset)
 
         epoch_result = {"epoch": epoch,
                         "training loss": train_loss,
@@ -218,7 +222,7 @@ if __name__ == "__main__":
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
-        wandb.init(project="chessmait", config=vars(config),)
+        wandb.init(project="chessmait", config=vars(config))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
