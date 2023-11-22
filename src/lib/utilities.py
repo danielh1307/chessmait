@@ -249,6 +249,50 @@ def fen_to_tensor_one_board(fen):
     return board.view(-1)
 
 
+def fen_to_tensor_one_board_dense(fen):
+    """
+    Converts FEN into a tensor of 64x2 dimensions representing the board.
+
+    """
+
+    # Define the piece values
+    pieces = {
+        "p": 1,
+        "n": 3,
+        "b": 4,
+        "r": 5,
+        "q": 9,
+        "k": 10
+    }
+
+    # Initialize an empty board
+    board = torch.zeros(64, 2)
+
+    # Split the FEN string to get the board layout and current player
+    position, player = fen.split(' ')[0:2]
+
+    # Replace numbers with the corresponding number of empty squares
+    for i in range(1, 9):
+        position = position.replace(str(i), '.' * i)
+
+    # Replace slashes with empty spaces
+    position = position.replace('/', '')
+
+    # Fill the board tensor
+    for i, piece in enumerate(position):
+        if piece.lower() in pieces.keys():
+            # Calculate the piece's binary value (1 for current player, -1 for opponent)
+            if (player == 'w' and piece.isupper()) or (player == 'b' and not piece.isupper()):
+                value = pieces.get(piece.lower())
+            else:
+                value = -1 * pieces.get(piece.lower())
+            piece_index = 0 if piece.isupper() else 1
+            board[i, piece_index] = value
+
+    # Reshape the tensor to the desired shape (768,)
+    return board.view(-1)
+
+
 def fen_to_cnn_tensor_alternative(fen):
     # Define the piece types
     pieces = 'pnbrqkPNBRQK'
@@ -285,7 +329,8 @@ def fen_to_cnn_tensor_alternative(fen):
 
 
 def main():
-    tensor = fen_to_cnn_tensor_non_hot_enc("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    tensor = fen_to_tensor_one_board_dense("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    print(tensor.shape)
     print(tensor)
 
 
