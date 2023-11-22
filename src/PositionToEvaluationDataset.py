@@ -44,11 +44,16 @@ class PositionToEvaluationDataset(Dataset):
 
         self.data = pd.concat(_dataframes, ignore_index=True)
 
+        # With this code you can clip the values between a specific range,
+        # e.g. between (in pawns) +15 (1500) and -15 (-1500)
+        # print("Clip the values between -1500 and 1500")
+        # self.data["Evaluation"] = self.data["Evaluation"].clip(lower=-1500, upper=1500)
+
         # Calculate min and max evaluation scores for normalization
         self.min_score = self.data["Evaluation"].min()
         self.max_score = self.data["Evaluation"].max()
 
-        # Normalize the evaluation in the range of [0, 1]
+        # With this code you can normalize the evaluation in a specific range (e.g. of [0, 1])
         print("Normalizing the evaluation ...")
         self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
