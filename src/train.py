@@ -178,7 +178,7 @@ def train_model(_config: argparse.Namespace,
         batch_number = 0
         for position, evaluation in _train_loader:
             if batch_number % 1000 == 0:
-                print(f"batch {batch_number} from {len(train_loader)} ...")
+                print(f"batch {batch_number} from {len(_train_loader)} ...")
             batch_number += 1
             _optimizer.zero_grad()
             predicted_evaluation = _model(position.to(_device))
@@ -188,7 +188,7 @@ def train_model(_config: argparse.Namespace,
             loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
-            train_loss += loss.item()
+            train_loss += loss.item() * position.size(0)
 
         # Validation
         _model.eval()
@@ -200,7 +200,11 @@ def train_model(_config: argparse.Namespace,
                 if REGRESSION_TRAINING:
                     evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
                 loss = _loss_function(predicted_evaluation, evaluation.to(_device))
-                val_loss += loss.item()
+                val_loss += loss.item() * position.size(0)
+
+        # calculate average losses
+        train_loss = train_loss / len(_train_loader.dataset)
+        val_loss = val_loss / len(_val_loader.dataset)
 
         epoch_result = {"epoch": epoch,
                         "training loss": train_loss,
