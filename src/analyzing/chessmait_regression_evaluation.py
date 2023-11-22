@@ -218,7 +218,7 @@ def create_statistics(fen_directory_evaluated):
     df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(evaluation_to_class)
 
     # Create a figure with two subplots side by side
-    fig, axes = plt.subplots(9, 2, figsize=(42, 24))
+    fig, axes = plt.subplots(9, 2, figsize=(36, 24))
 
     ##########################################################################
     # Plot: show distribution of true classes (absolute)
@@ -293,6 +293,9 @@ def create_statistics(fen_directory_evaluated):
         plot_axes.set_ylabel('Frequency')
         write_values_in_bars(curr_plot)
 
+    ##########################################################################
+    # Plot: show a confusion matrix
+    ##########################################################################
     plot_axes = axes[8, 0]
     cm = confusion_matrix(df["Evaluated_Class"], df["Evaluated_Class_Predicted"], labels=class_labels)
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, ax=plot_axes, xticklabels=class_labels,
@@ -300,6 +303,15 @@ def create_statistics(fen_directory_evaluated):
     plot_axes.set_title("Confusion Matrix")
     plot_axes.set_xlabel("Predicted Classes")
     plot_axes.set_ylabel("True Classes")
+
+    ##########################################################################
+    # Plot: scatterplot true values vs. predicted values
+    ##########################################################################
+    scatter_axes = axes[8, 1]
+    scatter_axes.scatter(df["Evaluation"], df["Evaluation_Predicted"], c='b', label='Predicted vs. True')
+    scatter_axes.set_title("Predicted vs True Regression Values")
+    scatter_axes.set_xlabel("Predicted Values")
+    scatter_axes.set_ylabel("True Values")
 
     plt.tight_layout()
 
