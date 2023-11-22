@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 import time
 
 import matplotlib.pyplot as plt
@@ -7,8 +8,8 @@ import pandas as pd
 import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
-from lib.analytics_utilities import evaluation_to_class
 
+from lib.analytics_utilities import evaluation_to_class
 from src.lib.utilities import fen_to_tensor_one_board
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
@@ -305,9 +306,20 @@ def create_statistics(fen_directory_evaluated):
     ##########################################################################
     # Plot: scatterplot true values vs. predicted values
     ##########################################################################
+    # we just show 0,1% of the data (randomly chosen), since otherwise the plot
+    # is too full of data points
+    num_points_to_display = int(0.001 * len(df))
+
+    # Randomly select a subset of data points
+    random_indices = random.sample(range(len(df)), num_points_to_display)
+
+    # Extract the selected data points
+    selected_data = df.iloc[random_indices]
+
     scatter_axes = axes[8, 1]
-    scatter_axes.scatter(df["Evaluation_Predicted"], df["Evaluation"], c='b', label='Predicted vs. True')
-    scatter_axes.set_title("Predicted vs True Regression Values")
+    scatter_axes.scatter(selected_data["Evaluation_Predicted"], selected_data["Evaluation"], c='b',
+                         label='Predicted vs. True', marker='o', s=20, alpha=0.5)
+    scatter_axes.set_title("Predicted vs True Regression Values (just 0,1%)")
     scatter_axes.set_xlabel("Predicted Values")
     scatter_axes.set_ylabel("True Values")
 
