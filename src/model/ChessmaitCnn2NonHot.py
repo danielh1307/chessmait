@@ -5,10 +5,10 @@ import torch as torch
 # Chessmait model using CNN
 class ChessmaitCnn2NonHot(nn.Module):
     def __init__(self):
-        super(ChessmaitCnn2NonHot,self).__init__()
+        super(ChessmaitCnn2NonHot, self).__init__()
         self.conv1 = nn.Sequential(
             # Conv layer 1
-            nn.Conv2d(1, 24, kernel_size=3,padding=1),
+            nn.Conv2d(2, 24, kernel_size=3,padding=1),
             nn.ReLU(),
             nn.Dropout2d()
         )
@@ -43,11 +43,11 @@ class ChessmaitCnn2NonHot(nn.Module):
             nn.Linear(48, 1)
         )
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        x = torch.flatten(x)
+        x = torch.flatten(x, 1)
         x = self.lin1(x)
         x = self.lin2(x)
         x = self.classifier(x)
