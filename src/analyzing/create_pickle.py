@@ -1,10 +1,9 @@
-import fnmatch
 import os
 import time
 
 import pandas as pd
 
-from src.lib.utilities import fen_to_tensor_one_board_dense
+from src.lib.utilities import fen_to_tensor_one_board_dense, get_files_from_pattern
 from src.lib.analytics_utilities import remove_mates
 
 # Helper script to create a pickle dataframe with the tensors
@@ -18,9 +17,7 @@ def to_tensor(fen_position):
     return fen_to_tensor_one_board_dense(fen_position)
 
 
-matching_files = [file for file in os.listdir(PATH_TO_DATAFILE) if
-                  fnmatch.fnmatch(file, "x_lichess_db_standard_rated_2023-03-001.csv")]
-file_names = [os.path.basename(file) for file in matching_files]
+file_names = get_files_from_pattern(PATH_TO_DATAFILE, "x_lichess_db_standard_rated_2023-03-001.csv")
 for file_name in file_names:
     df = pd.read_csv(os.path.join(PATH_TO_DATAFILE, file_name))
     df = remove_mates(df, "Evaluation")

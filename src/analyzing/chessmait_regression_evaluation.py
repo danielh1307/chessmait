@@ -10,7 +10,7 @@ import torch
 from sklearn.metrics import confusion_matrix
 
 from lib.analytics_utilities import evaluation_to_class, remove_mates
-from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.utilities import fen_to_tensor_one_board, write_values_in_bars
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # Helper script for different actions in the context of regression models.
@@ -180,15 +180,6 @@ def add_classes(fen_file):
     output_file_name = f"{fen_file[0:-4]}_with_class.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
     df.to_csv(output_file_name, index=False)
-
-
-def write_values_in_bars(curr_plot):
-    for p in curr_plot.patches:
-        curr_plot.annotate(format(p.get_height(), '.1f'),
-                           (p.get_x() + p.get_width() / 2., p.get_height()),
-                           ha='center', va='center',
-                           xytext=(0, 9),
-                           textcoords='offset points')
 
 
 def create_statistics(fen_directory_evaluated):

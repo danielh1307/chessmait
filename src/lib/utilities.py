@@ -1,9 +1,69 @@
 import chess
 import torch
+import os
+import fnmatch
+
+import pandas as pd
 
 CLASS_WIN = 1
 CLASS_DRAW = 0
 CLASS_LOSS = 2
+
+
+def get_files_from_pattern(directory, file_pattern):
+    """
+
+    Parameters
+    ----------
+    directory : str
+        a directory
+    file_pattern : str
+        a file name pattern
+
+    Returns
+    -------
+    list
+        Returns all files (just the file name) matching the pattern in the given directory
+
+    """
+    matching_files = [file for file in os.listdir(directory) if fnmatch.fnmatch(file, file_pattern)]
+    return [os.path.basename(file) for file in matching_files]
+
+
+def dataframe_from_files(directory: str, file_names):
+    """
+
+    Parameters
+    ----------
+    directory : str
+        a directory
+    file_names : list
+        a list of file names
+
+
+    Returns
+    -------
+    pd.Dataframe
+        a single Dataframe of all the given files in the given directory
+
+    """
+    _dataframes = []
+    for file_name in file_names:
+        print(f"Read {file_names} ...")
+        _dataframes.append(pd.read_csv(os.path.join(directory, file_name)))
+    return _dataframes
+
+
+def write_values_in_bars(curr_plot):
+    """
+    Writes the values from bar plots into the bars.
+    """
+    for p in curr_plot.patches:
+        curr_plot.annotate(format(p.get_height(), '.1f'),
+                           (p.get_x() + p.get_width() / 2., p.get_height()),
+                           ha='center', va='center',
+                           xytext=(0, 9),
+                           textcoords='offset points')
 
 
 # Check checkmate

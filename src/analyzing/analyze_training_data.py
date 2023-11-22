@@ -1,5 +1,4 @@
 import argparse
-import fnmatch
 import os
 
 import matplotlib.pyplot as plt
@@ -7,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 
 from src.lib.analytics_utilities import evaluation_to_class, remove_mates
+from src.lib.utilities import get_files_from_pattern, dataframe_from_files, write_values_in_bars
 
 # Helper script to analyze training data, mainly based on classification
 # It creates seaborn plots of the given .csv files.
@@ -56,24 +56,9 @@ REGRESSION_CLASSES = {
 }
 
 
-def write_values_in_bars(curr_plot):
-    for p in curr_plot.patches:
-        curr_plot.annotate(format(p.get_height(), '.1f'),
-                           (p.get_x() + p.get_width() / 2., p.get_height()),
-                           ha='center', va='center',
-                           xytext=(0, 9),
-                           textcoords='offset points')
-
-
 def analyze_files_classification(file_pattern):
-    matching_files = [file for file in os.listdir(PATH_TO_DATAFILE) if
-                      fnmatch.fnmatch(file, file_pattern)]
-    file_names = [os.path.basename(file) for file in matching_files]
-
-    _dataframes = []
-    for file_name in file_names:
-        print(f"Read {file_names} ...")
-        _dataframes.append(pd.read_csv(os.path.join(PATH_TO_DATAFILE, file_name)))
+    file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
+    _dataframes = dataframe_from_files(PATH_TO_DATAFILE, file_names)
 
     df = pd.concat(_dataframes, ignore_index=True)
     print(f"I have loaded {len(df)} entries ...")
@@ -101,14 +86,8 @@ def analyze_files_classification(file_pattern):
 
 
 def analyze_files_regression(file_pattern):
-    matching_files = [file for file in os.listdir(PATH_TO_DATAFILE) if
-                      fnmatch.fnmatch(file, file_pattern)]
-    file_names = [os.path.basename(file) for file in matching_files]
-
-    _dataframes = []
-    for file_name in file_names:
-        print(f"Read {file_names} ...")
-        _dataframes.append(pd.read_csv(os.path.join(PATH_TO_DATAFILE, file_name)))
+    file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
+    _dataframes = dataframe_from_files(PATH_TO_DATAFILE, file_names)
 
     df = pd.concat(_dataframes, ignore_index=True)
     print(f"I have loaded {len(df)} entries ...")

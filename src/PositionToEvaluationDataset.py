@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 
 from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.analytics_utilities import remove_mates
 
 
 #########################################################################
@@ -36,10 +37,7 @@ class PositionToEvaluationDataset(Dataset):
                 # is also contained there (e.g. 'mate in 3')
                 # we remove those lines and convert the datatype to int
                 _dataframe = pd.read_csv(csv_file)
-                if _dataframe["Evaluation"].dtype == 'object':
-                    # remove mates
-                    _dataframe = _dataframe[~_dataframe['Evaluation'].str.startswith('#')]
-                    _dataframe["Evaluation"] = _dataframe["Evaluation"].astype(int)
+                _dataframe = remove_mates(_dataframe, 'Evaluation')
                 _dataframes.append(_dataframe)
 
         self.data = pd.concat(_dataframes, ignore_index=True)
