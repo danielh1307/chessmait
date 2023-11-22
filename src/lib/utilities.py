@@ -130,7 +130,7 @@ def fen_to_cnn_tensor(fen):
             else:  # black color on layer 6-12
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
-            result[piece_layer, sq // 8, sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
+            result[piece_layer, int(sq / 8), sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
                                                      (1 if board.turn == chess.WHITE else -1)
     return result
 

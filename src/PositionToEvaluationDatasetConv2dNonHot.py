@@ -66,7 +66,6 @@ class PositionToEvaluationDatasetConv2dNonHot(Dataset):
 
     def __getitem__(self, idx):
         x = self.data.iloc[idx, 0]  # FEN position
-        #print(x.shape)
         y = torch.tensor(self.data.iloc[idx, 1], dtype=torch.float32)  # position evaluation
         return x, y
 
