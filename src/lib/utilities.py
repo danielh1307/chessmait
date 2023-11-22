@@ -130,7 +130,7 @@ def fen_to_cnn_tensor(fen):
             else:  # black color on layer 6-12
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
-            result[piece_layer, sq // 8, sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
+            result[piece_layer, int(sq / 8), sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
                                                      (1 if board.turn == chess.WHITE else -1)
     return result
 
@@ -158,55 +158,16 @@ def fen_to_cnn_tensor_non_hot_enc(fen):
     5:   Queen
     6:   King
     """
-    # Define the piece types
-    pieces = 'pnbrqkPNBRQK'
-    piece_to_index = {
-        'p': 1,
-        'k': 2,
-        'b': 3,
-        'r': 4,
-        'q': 5,
-        'k': 6,
-        'P': 1,
-        'K': 2,
-        'B': 3,
-        'R': 4,
-        'Q': 5,
-        'K': 6
-    }
+    board = chess.Board()
+    board.set_fen(fen)
 
-    # Initialize an empty board
-    board = torch.zeros(2, 8, 8)
-
-    # Split the FEN string to get the board layout and current player
-    position, player = fen.split(' ')[0:2]
-
-    # Replace numbers with the corresponding number of empty squares
-    for i in range(1, 9):
-        position = position.replace(str(i), '.' * i)
-
-    # Replace slashes with empty spaces
-    position = position.replace('/', '')
-
-    # Fill the board tensor
-    for i, piece in enumerate(position):
-        row = i // 8
-        col = i % 8
-        if piece in piece_to_index:
-            if piece.isupper():
-                layer = 1
-            else:
-                layer = 0
-            # Calculate the piece's binary value (1 for current player, -1 for opponent)
-            if (player == 'w' and piece.isupper()) or (player == 'b' and not piece.isupper()):
-                multiplicator = 1
-            else:
-                multiplicator = -1
-            board[layer, row, col] = piece_to_index[piece] * multiplicator
-            # board[row, [col, piece_to_index[piece]]] = value
-
-    # Reshape the tensor to the desired shape (768,)
-    return board
+    result = torch.zeros((8, 8))
+    for sq in chess.SQUARES:
+        piece_type = int(board.piece_type_at(sq) or 0)
+        if piece_type != 0:  # Not no color
+            result[int(sq / 8), sq % 8] = piece_type * (
+                1 if board.turn == chess.WHITE else -1) * (1 if board.color_at(sq) == chess.WHITE else -1)
+    return result
 
 
 def fen_to_tensor_one_board(fen):
