@@ -9,7 +9,7 @@ import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
 
-from lib.analytics_utilities import evaluation_to_class
+from lib.analytics_utilities import evaluation_to_class, remove_mates
 from src.lib.utilities import fen_to_tensor_one_board
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
@@ -23,9 +23,9 @@ NORMALIZATION_USED = False
 MAX_EVALUATION = 15265
 MIN_EVALUATION = -15265
 CLIPPING_USED = True
-MAX_CLIPPING = 1500
-MIN_CLIPPING = 1500
-MODEL_NAME = "giddy-fog-71"
+MAX_CLIPPING = 1000
+MIN_CLIPPING = 1000
+MODEL_NAME = "upbeat-cloud-79"
 
 CLASSES = {
     ">4": {
@@ -162,10 +162,7 @@ def evaluate_fen_file(fen_file, device):
 
     if CLIPPING_USED:
         # we "clip" both the true values and the predicted values
-        if df["Evaluation"].dtype == 'object':
-            # filter the mates
-            df = df[~df['Evaluation'].str.startswith('#')]
-            df["Evaluation"] = df["Evaluation"].astype(int)
+        df = remove_mates(df, 'Evaluation')
         df["Evaluation"] = df["Evaluation"].clip(lower=-1500, upper=1500)
         df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=-1500, upper=1500)
 
@@ -201,10 +198,7 @@ def create_statistics(fen_directory_evaluated):
             continue
         print(f"Reading file {fen_file_evaluated} ...")
         _df = pd.read_csv(os.path.join(fen_directory_evaluated, fen_file_evaluated))
-        if _df["Evaluation"].dtype == 'object':
-            # filter the mates
-            _df = _df[~_df['Evaluation'].str.startswith('#')]
-        _df["Evaluation"] = _df["Evaluation"].astype(int)
+        _df = remove_mates(_df, 'Evaluation')
         _df["Evaluation_Predicted"] = _df["Evaluation_Predicted"].astype(int)
         dfs.append(_df)
 

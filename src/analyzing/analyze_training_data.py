@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from src.lib.analytics_utilities import evaluation_to_class
+from src.lib.analytics_utilities import evaluation_to_class, remove_mates
 
 # Helper script to analyze training data, mainly based on classification
 # It creates seaborn plots of the given .csv files.
@@ -113,11 +113,7 @@ def analyze_files_regression(file_pattern):
     df = pd.concat(_dataframes, ignore_index=True)
     print(f"I have loaded {len(df)} entries ...")
 
-    if df["Evaluation"].dtype == 'object':
-        # filter the mates
-        df = df[~df['Evaluation'].str.startswith('#')]
-        df["Evaluation"] = df["Evaluation"].astype(int)
-
+    df = remove_mates(df, "Evaluation")
     # add class labels
     df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(REGRESSION_CLASSES, x))
 

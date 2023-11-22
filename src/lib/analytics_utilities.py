@@ -1,4 +1,21 @@
+import pandas as pd
+
 def evaluation_to_class(CLASSES, evaluation):
+    """
+    This method creates class labels from regression values.
+
+    Parameters
+    ----------
+    CLASSES : dict
+        Dictionary with class names associated to min and max values.
+    evaluation
+        The regression value which is transformed to a class label.
+
+    Returns
+    -------
+    The class label which matches the regression value.
+
+    """
     for key, range_dict in CLASSES.items():
         if "min" in range_dict and "max" in range_dict:
             # if we have both min and max, our value is in between
@@ -17,3 +34,10 @@ def evaluation_to_class(CLASSES, evaluation):
             if evaluation < max_value:
                 return key
     raise Exception(f"No class found for {evaluation}")
+
+
+def remove_mates(df: pd.DataFrame, column):
+    if df[column].dtype == 'object':
+        df[column] = df[~df[column].str.startswith('#')]
+        df[column] = df[column].astype(int)
+    return df
