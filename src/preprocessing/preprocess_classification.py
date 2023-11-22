@@ -2,6 +2,7 @@ import argparse
 import os
 
 import pandas as pd
+from lib.analytics_utilities import evaluation_to_class
 
 directory_preprocessed = os.path.join("data", "preprocessed")
 directory_preprocessed_classification = os.path.join("data", "preprocessed-classification")
@@ -21,25 +22,6 @@ CLASSES = {
 }
 
 
-def evaluation_to_class(evaluation):
-    for key, range_dict in CLASSES.items():
-        if "min" in range_dict and "max" in range_dict:
-            min_value = range_dict["min"]
-            max_value = range_dict["max"]
-            if min_value <= evaluation <= max_value:
-                return range_dict["label"]
-        elif "min" in range_dict:
-            min_value = range_dict["min"]
-            if evaluation > min_value:
-                return range_dict["label"]
-        elif "max" in range_dict:
-            max_value = range_dict["max"]
-            if evaluation < max_value:
-                return range_dict["label"]
-
-    return 0
-
-
 def preprocess_regression_to_evaluation(evaluated_regression_file):
     df = pd.read_csv(os.path.join(directory_preprocessed, evaluated_regression_file))
     if df["Evaluation"].dtype == 'object':
@@ -47,7 +29,7 @@ def preprocess_regression_to_evaluation(evaluated_regression_file):
         df = df[~df['Evaluation'].str.startswith('#')]
         df["Evaluation"] = df["Evaluation"].astype(int)
 
-    df["Evaluated_Class"] = df["Evaluation"].apply(evaluation_to_class)
+    df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
     df = df.drop(columns=['Evaluation'])
 
     out_file = os.path.join(directory_preprocessed_classification, evaluated_regression_file)

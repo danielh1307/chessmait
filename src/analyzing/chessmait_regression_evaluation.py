@@ -7,23 +7,24 @@ import pandas as pd
 import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
+from lib.analytics_utilities import evaluation_to_class
 
 from src.lib.utilities import fen_to_tensor_one_board
-from src.model.ChessmaitMlp4 import ChessmaitMlp4
+from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # Helper script for different actions in the context of regression models.
 # See the documentation of the arguments for more information.
 
 # Adjust these values for your needs
 # The MAX_EVALUATION and MIN_EVALUATION can be taken from wandb
-model = ChessmaitMlp4()
-MAX_EVALUATION = 12352
-MIN_EVALUATION = -12349
-MODEL_NAME = "divine-leaf-29"
+model = ChessmaitMlp5()
+MAX_EVALUATION = 15265
+MIN_EVALUATION = -15265
+MODEL_NAME = "toast-monkey-69"
 
 CLASSES = {
     ">4": {
-        "max": 400
+        "min": 400
     },
     "4>p>2": {
         "min": 200,
@@ -58,7 +59,7 @@ CLASSES = {
         "max": -200
     },
     "<-4": {
-        "min": -400,
+        "max": -400,
     }
 }
 
@@ -82,7 +83,7 @@ def get_device():
         else "cpu"
     )
 
-    print(f"For this training, we are going to use {_device} device ...")
+    print(f"We are going to use {_device} device ...")
     return _device
 
 
@@ -157,29 +158,11 @@ def evaluate_fen_file(fen_file, device):
     df.to_csv(output_file_name, index=False)
 
 
-def evaluation_to_class(evaluation):
-    for key, range_dict in CLASSES.items():
-        if "min" in range_dict and "max" in range_dict:
-            min_value = range_dict["min"]
-            max_value = range_dict["max"]
-            if min_value <= evaluation <= max_value:
-                return key
-        elif "min" in range_dict:
-            min_value = range_dict["min"]
-            if evaluation < min_value:
-                return key
-        elif "max" in range_dict:
-            max_value = range_dict["max"]
-            if evaluation >= max_value:
-                return key
-    raise Exception(f"No class found for {evaluation}")
-
-
 def add_classes(fen_file):
     df = pd.read_csv(fen_file)
 
     # get class labels
-    df["Evaluated_Class"] = df["Evaluation"].apply(evaluation_to_class)
+    df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
 
     output_file_name = f"{fen_file[0:-4]}_with_class.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
@@ -214,8 +197,8 @@ def create_statistics(fen_directory_evaluated):
     print(f"Creating statistics for {fen_directory_evaluated}, which are {len(df)} positions ...")
 
     # add class labels
-    df["Evaluated_Class"] = df["Evaluation"].apply(evaluation_to_class)
-    df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(evaluation_to_class)
+    df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
+    df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(lambda x: evaluation_to_class(CLASSES, x))
 
     # Create a figure with two subplots side by side
     fig, axes = plt.subplots(9, 2, figsize=(36, 24))
@@ -308,7 +291,7 @@ def create_statistics(fen_directory_evaluated):
     # Plot: scatterplot true values vs. predicted values
     ##########################################################################
     scatter_axes = axes[8, 1]
-    scatter_axes.scatter(df["Evaluation"], df["Evaluation_Predicted"], c='b', label='Predicted vs. True')
+    scatter_axes.scatter(df["Evaluation_Predicted"], df["Evaluation"], c='b', label='Predicted vs. True')
     scatter_axes.set_title("Predicted vs True Regression Values")
     scatter_axes.set_xlabel("Predicted Values")
     scatter_axes.set_ylabel("True Values")
