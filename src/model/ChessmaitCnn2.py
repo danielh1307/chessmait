@@ -34,6 +34,7 @@ class ChessmaitCnn2(nn.Module):
         )
 
     def forward(self, x):
+        print(x.shape)
         x = self.features(x)
         x = torch.flatten(x, 1)
         x = self.classifier(x)

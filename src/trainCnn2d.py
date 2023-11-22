@@ -12,10 +12,8 @@ from torch.utils.data import DataLoader, random_split
 from src.PositionToEvaluationDatasetConv2d import PositionToEvaluationDatasetConv2d
 from src.model.ChessmaitMlp1 import ChessmaitMlp1
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
-from src.model.ChessmaitMlp2 import ChessmaitMlp2
-from src.model.rbf2 import RbfNetwork2
-from src.model.rbf1 import RbfNetwork1
 from src.model.ChessmaitCnn1 import ChessmaitCnn1
+from src.model.ChessmaitCnn2 import ChessmaitCnn2
 
 ############################################################
 # This is the central Python script to perform the training
@@ -35,15 +33,12 @@ file_names = [os.path.basename(file) for file in matching_files]
 for file_name in file_names:
     PICKLE_FILES.append(file_name)
 
-WANDB_REPORTING = False
+WANDB_REPORTING = True
 REGRESSION_TRAINING = True
 FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor"
 
-#model = ChessmaitMlp1()
-#model = ChessmaitMlp2()
-#model = RbfNetwork2()
-#model = RbfNetwork1()
-model = ChessmaitCnn1()
+# model = ChessmaitCnn1()
+model = ChessmaitCnn2()
 
 
 
@@ -86,7 +81,7 @@ def get_training_configuration() -> argparse.Namespace:
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
     _config.epochs = 15
-    _config.batch_size = 1024
+    _config.batch_size = 256
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -226,7 +221,7 @@ if __name__ == "__main__":
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
-        wandb.init(project="chessmait", config=vars(config))
+        wandb.init(project="chessmait", config=vars(config),)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,

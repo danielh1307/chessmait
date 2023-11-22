@@ -155,6 +155,8 @@ def train_model(_config: argparse.Namespace,
                 print(f"batch {batch_number} from {len(train_loader)} ...")
             batch_number += 1
             _optimizer.zero_grad()
+            print("Position")
+            print(position.shape)
             predicted_evaluation = _model(position.to(_device))
 
             if REGRESSION_TRAINING:

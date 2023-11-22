@@ -8,7 +8,7 @@ class ChessmaitCnn2NonHot(nn.Module):
         super(ChessmaitCnn2NonHot,self).__init__()
         self.conv1 = nn.Sequential(
             # Conv layer 1
-            nn.Conv2d(1, 24, kernel_size=3,padding=1),
+            nn.Conv2d(2, 24, kernel_size=3,padding=1),
             nn.ReLU(),
             nn.Dropout2d()
         )
@@ -44,6 +44,8 @@ class ChessmaitCnn2NonHot(nn.Module):
         )
 
     def forward(self,x):
+        print("Forward")
+        print(x.shape)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
