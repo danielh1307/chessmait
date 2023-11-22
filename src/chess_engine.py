@@ -51,8 +51,8 @@ def run():
     moves = 0
     evals = {True: {}, False: {}}
 
-    model_white = tm.model_firm_star_24
-    model_black = tm.model_smart_valley_6
+    model_white = tm.model_fluent_mountain_47
+    model_black = tm.model_wild_snow_28
 
     while not stop:
         moves += 1
