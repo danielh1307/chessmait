@@ -4,9 +4,11 @@ import re
 
 import chess.engine
 import chess.pgn
+import pandas
+
 
 # TODO add path
-pgn_data_path_raw = ""
+pgn_data_path_raw = os.path.join("data", "raw", "pgn")
 pgn_data_path_preprocessed = os.path.join("data", "preprocessed")
 NUMBER_OF_GAMES_TO_PREPROCESS = -1  # set to -1 to preprocess all games
 EVAL_REGEX_NORMAL_MOVE = r'\[%eval ([-+]?\d+\.\d+)]'
@@ -65,6 +67,8 @@ def preprocess_lichess():
             board = game.board()
             for node in game.mainline():
                 board.push(node.move)
+                if node.ply() < 11:
+                    continue
                 eval_match = re.search(EVAL_REGEX_NORMAL_MOVE, str(node.comment))
                 if eval_match:
                     evaluation = eval_match.group(1)
@@ -89,9 +93,16 @@ def preprocess_lichess():
             append_preprocessed_csv(os.path.join(pgn_data_path_preprocessed, pgn_data_file[0:-4] + ".csv"), output_data)
 
 
+def remove_duplicate_lines():
+    df = pandas.read_csv(os.path.join(pgn_data_path_preprocessed, pgn_data_file[0:-4] + ".csv"))
+    df.drop_duplicates(inplace=True)
+    df.to_csv(os.path.join(pgn_data_path_preprocessed, pgn_data_file[0:-4] + ".csv"), index=False)
+
+
 if __name__ == "__main__":
     pgn_files = [file for file in os.listdir(pgn_data_path_raw) if file.endswith('.pgn')]
     for pgn_data_file in pgn_files:
         print(f"Starting to preprocess the PGN data from file {pgn_data_file} ...")
         preprocess_lichess()
+        remove_duplicate_lines()
     print("Finished")

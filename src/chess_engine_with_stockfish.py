@@ -9,15 +9,15 @@ PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.
 
 
 def run():
-    board = chess.Board()
     board_status = bs.BoardStatus()
 
-    model_white = tm.model_firm_star_24
+    model_white = tm.model_fluent_mountain_47
+    model_black = tm.model_wild_snow_28
 
     start = timer()
     no_display = False
 
-    wins = {True: 0, False: 0}
+    wins = {True: 0, False: 0, 'Draw': 0}
     with chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE) as engine:
         engine.configure({"UCI_Elo": 1320})
 
@@ -26,7 +26,7 @@ def run():
 
         for i in range(1, 101):
 
-            board.reset_board()
+            board = chess.Board()
             one_round = False
             stop = False
 
@@ -38,12 +38,21 @@ def run():
                 is_white = (moves % 2) == 1
                 board_status.cache(board)
                 if not no_display:
-                    print(f"--------------- Round: {i} --- Moves: {moves:02d} {'white' if is_white else 'black'}")
+                    print(f"--------------- Round: {i} --- Moves: {moves:02d} {'white' if is_white else 'black'}", end='')
                 if is_white:
-                    #ce.play(board, model_white, is_white)
-                    result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
-                    board.push(result.move)
+                    eval_engine = engine.analyse(board, chess.engine.Limit(depth=10))["score"].white().score()
+                    eval = ce.play(board, model_white, is_white)
+                    #(eval, _) = ce.get_best_move(board.fen(), model_white, False)
+                    if not no_display:
+                        print(f" --- eval model/engine w/b: {eval}/{eval_engine}")
+                    #result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
+                    #board.push(result.move)
                 else:
+                    eval_engine = engine.analyse(board, chess.engine.Limit(depth=10))["score"].black().score()
+                    #eval = ce.play(board, model_black, is_white)
+                    (eval, _) = ce.get_best_move(board.fen(), model_white, False)
+                    if not no_display:
+                        print(f" --- eval model/engine: {eval}/{eval_engine}")
                     result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
                     board.push(result.move)
                 if not no_display:
@@ -71,10 +80,12 @@ def run():
                         print(reason)
                     if reason == "Termination.CHECKMATE":
                         wins[is_white] += 1
+                    else:
+                        wins['Draw'] += 1
                     break
 
             if not stop:
-                print(f"wins: white = {wins[True]} - black = {wins[False]}")
+                print(f"wins: white = {wins[True]} - black = {wins[False]} - draw = {wins['Draw']}")
                 if not no_display:
                     print("--------------------------------------------")
             else:
