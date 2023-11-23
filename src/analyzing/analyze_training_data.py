@@ -58,9 +58,8 @@ REGRESSION_CLASSES = {
 
 def analyze_files_classification(file_pattern):
     file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
-    _dataframes = dataframe_from_files(PATH_TO_DATAFILE, file_names)
+    df = dataframe_from_files(PATH_TO_DATAFILE, file_names)
 
-    df = pd.concat(_dataframes, ignore_index=True)
     print(f"I have loaded {len(df)} entries ...")
 
     # Create a figure with two subplots side by side
@@ -87,9 +86,8 @@ def analyze_files_classification(file_pattern):
 
 def analyze_files_regression(file_pattern):
     file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
-    _dataframes = dataframe_from_files(PATH_TO_DATAFILE, file_names)
+    df = dataframe_from_files(PATH_TO_DATAFILE, file_names)
 
-    df = pd.concat(_dataframes, ignore_index=True)
     print(f"I have loaded {len(df)} entries ...")
 
     df = remove_mates(df, "Evaluation")

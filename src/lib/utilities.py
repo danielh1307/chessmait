@@ -44,14 +44,15 @@ def dataframe_from_files(directory: str, file_names):
     Returns
     -------
     pd.Dataframe
-        a single Dataframe of all the given files in the given directory
+        a single Dataframe of all the given files in the given directory without the index
 
     """
     _dataframes = []
     for file_name in file_names:
         print(f"Read {file_names} ...")
         _dataframes.append(pd.read_csv(os.path.join(directory, file_name)))
-    return _dataframes
+
+    return pd.concat(_dataframes, ignore_index=True)
 
 
 def write_values_in_bars(curr_plot):
