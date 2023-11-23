@@ -49,7 +49,7 @@ def dataframe_from_files(file_names_with_directory, pickle_files=False):
     """
     _dataframes = []
     for file_name_with_directory in file_names_with_directory:
-        print(f"Read {file_names_with_directory} ...")
+        print(f"Read {file_name_with_directory} ...")
         if pickle_files:
             _dataframes.append(pd.read_pickle(file_name_with_directory))
         else:
