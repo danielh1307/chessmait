@@ -16,5 +16,6 @@ def test_remove_mates():
 
     # Check if the rows with '#' at the beginning are removed
     assert len(cleaned_df) == 3  # Expected length after removal
-    assert 'Fen4' not in cleaned_df['FEN']  # '#' row should be removed
+    assert 'Fen4' not in cleaned_df['FEN'].tolist()  # '#' row should be removed
+    assert 'Fen1' in cleaned_df['FEN'].tolist() # should still be present
     assert cleaned_df['Evaluation'].dtype == int  # 'Evaluation' column type should be int
