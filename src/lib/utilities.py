@@ -273,6 +273,56 @@ def fen_to_cnn_tensor_non_hot_enc(fen):
     return board
 
 
+def fen_to_tensor_non_hot_enc_1dim(fen):
+    """
+    Converts FEN into a tensor of 1x64 dimensions representing the board.
+
+    Parameters
+    ----------
+    fen String input as FEN
+
+    Returns
+    -------
+    Array size 1 (Height) x 64 (Weight).
+
+    """
+    piece_to_index = {
+        'p': -1,
+        'r': -3,
+        'n': -4,
+        'b': -6,
+        'q': -8,
+        'k': -10,
+        'P': 1,
+        'R': 3,
+        'N': 4,
+        'B': 6,
+        'Q': 8,
+        'K': 10
+    }
+
+    # Initialize an empty board
+    board = torch.zeros(64)
+
+    # Split the FEN string to get the board layout and current player
+    position, player = fen.split(' ')[0:2]
+
+    # Replace numbers with the corresponding number of empty squares
+    for i in range(1, 9):
+        position = position.replace(str(i), '.' * i)
+
+    # Replace slashes with empty spaces
+    position = position.replace('/', '')
+
+    # Fill the board tensor
+    for i, piece in enumerate(position):
+        if piece in piece_to_index:
+            board[i] = piece_to_index[piece]
+
+    # Reshape the tensor to the desired shape (64,)
+    return board
+
+
 def fen_to_tensor_one_board(fen):
     """
     Converts FEN into a tensor of 64x12 dimensions representing the board.
@@ -395,6 +445,10 @@ def fen_to_cnn_tensor_alternative(fen):
 def main():
     tensor = fen_to_tensor_one_board_dense("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
     print(tensor.shape)
+    print(tensor)
+    tensor = fen_to_tensor_non_hot_enc_1dim("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    print(tensor)
+    tensor = fen_to_tensor_non_hot_enc_1dim("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     print(tensor)
 
 

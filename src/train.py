@@ -74,7 +74,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=
 
 #################################################################################################
 
-def get_device():
+def get_device(print_message=True):
     """
     Checks which device is most appropriate to perform the training.
     If cuda is available, cuda is returned, otherwise mps or cpu.
@@ -93,7 +93,8 @@ def get_device():
         else "cpu"
     )
 
-    print(f"For this training, we are going to use {_device} device ...")
+    if print_message:
+        print(f"For this training, we are going to use {_device} device ...")
     return _device
 
 

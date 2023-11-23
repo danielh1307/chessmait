@@ -1,19 +1,24 @@
 import random
 
 import chess
-from random import randrange
 from lib.position_validator import get_valid_positions
 from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc
 import src.board_status as bs
 import trained_model as tm
+import torch as tc
 
 
 def get_valid_moves_with_evaluation(current_position, trained_model):
     valid_positions = get_valid_positions(current_position)
     dict = {}
     for valid_position in valid_positions:
-        t = fen_to_tensor_one_board(valid_position)
-        t = t.view(-1, t.size(0))
+        if trained_model.fen_to_tensor == 1:
+            t = fen_to_cnn_tensor_non_hot_enc(valid_position)
+            t = tc.unsqueeze(t, dim=0)
+        else:
+            t = fen_to_tensor_one_board(valid_position)
+            t = t.view(-1, t.size(0))
         normalized_evaluation = trained_model.model(t)
         evaluation = trained_model.de_normalize(normalized_evaluation)
         evaluation = evaluation.item()
