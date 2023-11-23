@@ -163,8 +163,8 @@ def evaluate_fen_file(fen_file, device):
     if CLIPPING_USED:
         # we "clip" both the true values and the predicted values
         df = remove_mates(df, 'Evaluation')
-        df["Evaluation"] = df["Evaluation"].clip(lower=-1500, upper=1500)
-        df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=-1500, upper=1500)
+        df["Evaluation"] = df["Evaluation"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
+        df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
 
     output_file_name = f"{fen_file[0:-4]}_evaluated_{MODEL_NAME}.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
     device = get_device()
     model.to(device)
-    model.load_state_dict(torch.load(f"models/{MODEL_NAME}.pth"))
+    model.load_state_dict(torch.load(f"models/{MODEL_NAME}.pth", map_location=device))
     model.eval()
 
     if args.fen_evaluation:
