@@ -10,7 +10,6 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 
 from src.PositionToEvaluationDatasetConv2dNonHot import PositionToEvaluationDatasetConv2dNonHot
-from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.model.ChessmaitCnn2NonHot import ChessmaitCnn2NonHot
 
 ############################################################
@@ -33,7 +32,7 @@ for file_name in file_names:
 
 WANDB_REPORTING = True
 REGRESSION_TRAINING = True
-FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor"
+FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor_non_hot_enc"
 
 model = ChessmaitCnn2NonHot()
 
@@ -74,11 +73,11 @@ def get_training_configuration() -> argparse.Namespace:
     """
     _config = argparse.Namespace()
     _config.train_percentage = 0.85  # percentage of data which is used for training
-    _config.learning_rate = 0.001
+    _config.learning_rate = 0.001 #0.001
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
     _config.eps = 1e-8  # needed for Adam optimizer
     _config.epochs = 15
-    _config.batch_size = 1024
+    _config.batch_size = 256
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -132,7 +131,7 @@ def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
                 _optimizer: torch.optim.Adam,
                 _scheduler,
-                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
+                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, nn.HuberLoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader,
                 _device: str):
@@ -162,18 +161,18 @@ def train_model(_config: argparse.Namespace,
             loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
-            train_loss += loss.item()
+            train_loss += loss.item() * position.size(0)
 
         # Validation
         _model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for position, evaluation in _val_loader:
+            for position,evaluation in _val_loader:
                 predicted_evaluation = _model(position.to(_device))
 
                 if REGRESSION_TRAINING:
-                    evaluation = evaluation.unsqueeze(1)  # Reshapes [64] to [64, 1] to match the predicted_evaluation
-                loss = _loss_function(predicted_evaluation, evaluation.to(_device))
+                    evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
+                loss = _loss_function(predicted_evaluation,evaluation.to(_device))
                 val_loss += loss.item() * position.size(0)
 
         # calculate average losses
@@ -215,7 +214,7 @@ if __name__ == "__main__":
     train_loader, val_loader = get_dataloaders(config)
 
     if REGRESSION_TRAINING:
-        loss_function = CustomWeightedMSELoss()
+        loss_function = nn.HuberLoss()
     else:
         loss_function = nn.CrossEntropyLoss()
 
