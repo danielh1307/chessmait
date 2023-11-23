@@ -182,6 +182,43 @@ def add_classes(fen_file):
     df.to_csv(output_file_name, index=False)
 
 
+def smallest_and_highest_differences(fen_directory_evaluated):
+    dfs = []
+    for fen_file_evaluated in os.listdir(fen_directory_evaluated):
+        if not fen_file_evaluated.endswith(".csv"):
+            continue
+        print(f"Reading file {fen_file_evaluated} ...")
+        _df = pd.read_csv(os.path.join(fen_directory_evaluated, fen_file_evaluated))
+        _df = remove_mates(_df, 'Evaluation')
+        _df["Evaluation_Predicted"] = _df["Evaluation_Predicted"].astype(int)
+        dfs.append(_df)
+
+    df = pd.concat(dfs, ignore_index=True)
+
+    print(f"Creating statistics for {fen_directory_evaluated}, which are {len(df)} positions ...")
+
+    # remove clipped values
+    if CLIPPING_USED:
+        # do not check values which have been clipped because the difference is always 0
+        df = df[(df['Evaluation'] > MIN_CLIPPING) & (df['Evaluation'] < MAX_CLIPPING)]
+
+    # add class labels
+    df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
+    df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(lambda x: evaluation_to_class(CLASSES, x))
+
+    # add absolute difference
+    df["Diff"] = abs(df["Evaluation"] - df["Evaluation_Predicted"])
+
+    # get best and worse evaluations
+    best_evaluations = df.nsmallest(10, "Diff")
+    worse_evaluations = df.nlargest(10, "Diff")
+
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    print(best_evaluations.to_string(index=False))
+    print(worse_evaluations.to_string(index=False))
+
+
 def create_statistics(fen_directory_evaluated):
     dfs = []
     for fen_file_evaluated in os.listdir(fen_directory_evaluated):
@@ -328,6 +365,9 @@ if __name__ == "__main__":
     # we can create statistics based on a predicted .csv file
     parser.add_argument("--statistics", type=str, required=False)
 
+    # get best and worse evaluations
+    parser.add_argument("--best-worse", type=str, required=False)
+
     # we can add class labels to a predicted .csv file
     parser.add_argument("--add-classes", type=str, required=False)
     args = parser.parse_args()
@@ -345,3 +385,5 @@ if __name__ == "__main__":
         add_classes(args.add_classes)
     elif args.fen_evaluation_file:
         evaluate_fen_file(args.fen_evaluation_file, device)
+    elif args.best_worse:
+        smallest_and_highest_differences(args.best_worse)
