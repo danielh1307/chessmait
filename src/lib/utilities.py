@@ -226,17 +226,17 @@ def fen_to_cnn_tensor_non_hot_enc(fen):
     pieces = 'pnbrqkPNBRQK'
     piece_to_index = {
         'p': 1,
-        'k': 2,
-        'b': 3,
-        'r': 4,
-        'q': 5,
-        'k': 6,
+        'n': 3,
+        'b': 4,
+        'r': 5,
+        'q': 9,
+        'k': 10,
         'P': 1,
-        'K': 2,
-        'B': 3,
-        'R': 4,
-        'Q': 5,
-        'K': 6
+        'N': 3,
+        'B': 4,
+        'R': 5,
+        'Q': 9,
+        'K': 10
     }
 
     # Initialize an empty board
