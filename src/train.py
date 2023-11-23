@@ -1,5 +1,4 @@
 import argparse
-import fnmatch
 import os
 from typing import Union
 
@@ -42,8 +41,8 @@ def get_training_configuration() -> argparse.Namespace:
     # _config.momentum = 0.7
     # _config.weight_decay = 1e-8
 
-    _config.epochs = 10
-    _config.batch_size = 256
+    _config.epochs = 15
+    _config.batch_size = 1024
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -69,7 +68,7 @@ FEN_TO_TENSOR_METHOD = "fen_to_tensor_one_board"  # just for documentation
 # Model, loss function, optimizer
 config = get_training_configuration()
 model = ChessmaitMlp5()
-loss_function = nn.MSELoss()
+loss_function = nn.HuberLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
 
 
@@ -96,15 +95,6 @@ def get_device():
 
     print(f"For this training, we are going to use {_device} device ...")
     return _device
-
-
-def get_files_from_pattern():
-    # use this method to load files from a specific pattern
-    matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
-                      fnmatch.fnmatch(file, "*.pkl")]
-    file_names = [os.path.basename(file) for file in matching_files]
-    for file_name in file_names:
-        PICKLE_FILES.append(file_name)
 
 
 def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, DataLoader):
