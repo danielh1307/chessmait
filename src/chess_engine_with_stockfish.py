@@ -4,6 +4,7 @@ import src.board_status as bs
 import src.chess_engine as ce
 import src.trained_model as tm
 from timeit import default_timer as timer
+from enum import Enum
 
 PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.exe")
 
@@ -12,7 +13,7 @@ def run():
     board_status = bs.BoardStatus()
 
     # model_white = tm.model_smart_valley_6
-    model_black = tm.model_upbeat_cloud_79
+    own_model = tm.model_upbeat_cloud_79
 
     start = timer()
     no_display = False
@@ -39,36 +40,12 @@ def run():
                 board_status.cache(board)
                 if not no_display:
                     print(f"--------------- Round: {i} --- Moves: {moves:02d} {'white' if is_white else 'black'}", end='')
+
                 if is_white:
-                    # Stockfish
-                    (eval, _) = ce.get_best_move(board.fen(), model_black, False)
-
-                    eval_engine = engine.analyse(board, chess.engine.Limit(depth=10))["score"].white().score()
-
-                    # Own model
-                    # eval = ce.play(board, model_white, is_white)
-
-                    if not no_display:
-                        print(f" --- eval model/engine w/b: {eval}/{eval_engine}")
-
-                    # Stockfish
-                    result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
-                    board.push(result.move)
+                    play_model_or_engine(board, engine, own_model, is_white, no_display, Player.STOCKFISH)
                 else:
-                    # Stockfish
-                    # (eval, _) = ce.get_best_move(board.fen(), model_white, False)
+                    play_model_or_engine(board, engine, own_model, is_white, no_display, Player.OWN_MODEL)
 
-                    eval_engine = engine.analyse(board, chess.engine.Limit(depth=10))["score"].black().score()
-
-                    # Own model
-                    eval = ce.play(board, model_black, is_white)
-
-                    if not no_display:
-                        print(f" --- eval model/engine: {eval}/{eval_engine}")
-
-                    # Stockfish
-                    # result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
-                    # board.push(result.move)
                 if not no_display:
                     board_status.print(board)
                 if not one_round and not automatic:
@@ -110,6 +87,32 @@ def run():
 
     end = timer()
     print(f"time: {(end - start):0.1f} sec")
+
+
+class Player(Enum):
+    OWN_MODEL = 1
+    STOCKFISH = 2
+
+
+def play_model_or_engine(board, engine, model, is_white, no_display, player):
+    if player == Player.STOCKFISH:
+        (_eval, _) = ce.get_best_move(board.fen(), model, is_white)
+
+    score = engine.analyse(board, chess.engine.Limit(depth=10))["score"]
+    if is_white:
+        _eval_engine = score.white().score()
+    else:
+        _eval_engine = score.black().score()
+
+    if player == Player.OWN_MODEL:
+        _eval = ce.play(board, model, is_white)
+
+    if not no_display:
+        print(f" --- eval model/stockfish w/b: {_eval:0.2f}/{_eval_engine}")
+
+    if player == Player.STOCKFISH:
+        result = engine.play(board, chess.engine.Limit(time=0.001, depth=1, nodes=1))
+        board.push(result.move)
 
 
 if __name__ == "__main__":

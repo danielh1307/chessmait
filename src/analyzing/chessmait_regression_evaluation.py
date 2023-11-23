@@ -174,6 +174,11 @@ def evaluate_fen_file(fen_file, device):
 def add_classes(fen_file):
     df = pd.read_csv(fen_file)
 
+    if df["Evaluation"].dtype == 'object':
+        # filter the mates
+        df = df[~df['Evaluation'].str.startswith('#')]
+        df["Evaluation"] = df["Evaluation"].astype(int)
+
     # get class labels
     df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
 
