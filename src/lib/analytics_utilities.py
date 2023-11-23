@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def evaluation_to_class(CLASSES, evaluation):
     """
     This method creates class labels from regression values.
