@@ -2,7 +2,6 @@ import argparse
 import os
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import seaborn as sns
 
 from src.lib.analytics_utilities import evaluation_to_class, remove_mates
@@ -58,7 +57,7 @@ REGRESSION_CLASSES = {
 
 def analyze_files_classification(file_pattern):
     file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
-    df = dataframe_from_files(PATH_TO_DATAFILE, file_names)
+    df = dataframe_from_files(file_names)
 
     print(f"I have loaded {len(df)} entries ...")
 
@@ -86,7 +85,7 @@ def analyze_files_classification(file_pattern):
 
 def analyze_files_regression(file_pattern):
     file_names = get_files_from_pattern(PATH_TO_DATAFILE, file_pattern)
-    df = dataframe_from_files(PATH_TO_DATAFILE, file_names)
+    df = dataframe_from_files(file_names)
 
     print(f"I have loaded {len(df)} entries ...")
 

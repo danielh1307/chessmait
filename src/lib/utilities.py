@@ -23,21 +23,21 @@ def get_files_from_pattern(directory, file_pattern):
     Returns
     -------
     list
-        Returns all files (just the file name) matching the pattern in the given directory
+        Returns all files (including directory) matching the pattern in the given directory
 
     """
     matching_files = [file for file in os.listdir(directory) if fnmatch.fnmatch(file, file_pattern)]
-    return [os.path.basename(file) for file in matching_files]
+    return [os.path.join(directory, file) for file in matching_files]
 
 
-def dataframe_from_files(directory: str, file_names):
+def dataframe_from_files(file_names_with_directory, pickle_files=False):
     """
 
     Parameters
     ----------
     directory : str
         a directory
-    file_names : list
+    file_names_with_directory : list
         a list of file names
 
 
@@ -48,9 +48,12 @@ def dataframe_from_files(directory: str, file_names):
 
     """
     _dataframes = []
-    for file_name in file_names:
-        print(f"Read {file_names} ...")
-        _dataframes.append(pd.read_csv(os.path.join(directory, file_name)))
+    for file_name_with_directory in file_names_with_directory:
+        print(f"Read {file_names_with_directory} ...")
+        if pickle_files:
+            _dataframes.append(pd.read_pickle(file_name_with_directory))
+        else:
+            _dataframes.append(pd.read_csv(file_name_with_directory))
 
     return pd.concat(_dataframes, ignore_index=True)
 

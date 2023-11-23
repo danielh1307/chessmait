@@ -23,9 +23,9 @@ def test_get_files_from_pattern():
 
     # assert
     assert len(file_names) == 3
-    assert "test-stockfish.csv" in file_names
-    assert "fen-test-1.csv" in file_names
-    assert "fen-test-2.csv" in file_names
+    assert r"test\resources\fen-test-1.csv" in file_names
+    assert r"test\resources\fen-test-2.csv" in file_names
+    assert r"test\resources\test-stockfish.csv" in file_names
 
 
 def test_dataframe_from_files():
@@ -33,7 +33,7 @@ def test_dataframe_from_files():
     file_names = utilities.get_files_from_pattern(os.path.join("test", "resources"), "fen-test-*.csv")
 
     # act
-    df = utilities.dataframe_from_files(os.path.join("test", "resources"), file_names)
+    df = utilities.dataframe_from_files(file_names)
 
     # assert
     assert len(df) == 6

@@ -1,9 +1,13 @@
-import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from src.lib.utilities import fen_to_tensor_one_board
 from src.lib.analytics_utilities import remove_mates
+from src.lib.utilities import fen_to_tensor_one_board, dataframe_from_files
+
+USE_NORMALIZATION = True
+USE_CLIPPING = False
+MIN_CLIPPING = -1000
+MAX_CLIPPING = 1000
 
 
 #########################################################################
@@ -16,6 +20,9 @@ def to_tensor(fen_position):
 
 class PositionToEvaluationDataset(Dataset):
     def __init__(self, csv_files, pickle_files):
+        if USE_NORMALIZATION and USE_CLIPPING:
+            raise Exception("Either choose normalization or clipping, not both")
+
         print("Loading the data ...")
         load_csv = len(csv_files) > 0
         load_pickle = len(pickle_files) > 0
@@ -25,35 +32,23 @@ class PositionToEvaluationDataset(Dataset):
 
         _dataframes = []
         if load_pickle:
-            for pickle_file in pickle_files:
-                print("Loading ", pickle_file, " ...")
-                _dataframe = pd.read_pickle(pickle_file)
-                _dataframes.append(_dataframe)
+            self.data = dataframe_from_files(pickle_files, pickle_files=True)
 
         if load_csv:
-            for csv_file in csv_files:
-                print("Loading ", csv_file, " ...")
-                # we have some .csv files with Evaluation as string, since the mate
-                # is also contained there (e.g. 'mate in 3')
-                # we remove those lines and convert the datatype to int
-                _dataframe = pd.read_csv(csv_file)
-                _dataframe = remove_mates(_dataframe, 'Evaluation')
-                _dataframes.append(_dataframe)
+            self.data = dataframe_from_files(csv_files)
+            self.data = remove_mates(self.data, "Evaluation")
 
-        self.data = pd.concat(_dataframes, ignore_index=True)
+        if USE_CLIPPING:
+            print("Clip the values between -1000 and 1000")
+            self.data["Evaluation"] = self.data["Evaluation"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
 
-        # With this code you can clip the values between a specific range,
-        # e.g. between (in pawns) +15 (1500) and -15 (-1500)
-        # print("Clip the values between -1500 and 1500")
-        # self.data["Evaluation"] = self.data["Evaluation"].clip(lower=-1500, upper=1500)
-
-        # Calculate min and max evaluation scores for normalization
+        # Calculate min and max evaluation scores
         self.min_score = self.data["Evaluation"].min()
         self.max_score = self.data["Evaluation"].max()
 
-        # With this code you can normalize the evaluation in a specific range (e.g. of [0, 1])
-        print("Normalizing the evaluation ...")
-        self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
+        if USE_NORMALIZATION:
+            print("Normalizing the evaluation ...")
+            self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
         if load_csv:
             print("Converting FEN to tensor ...")
