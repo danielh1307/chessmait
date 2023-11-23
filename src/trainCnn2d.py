@@ -13,8 +13,6 @@ from src.PositionToEvaluationDatasetConv2d import PositionToEvaluationDatasetCon
 from src.model.ChessmaitMlp1 import ChessmaitMlp1
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.model.ChessmaitMlp2 import ChessmaitMlp2
-from src.model.rbf2 import RbfNetwork2
-from src.model.rbf1 import RbfNetwork1
 from src.model.ChessmaitCnn1 import ChessmaitCnn1
 
 ############################################################
@@ -41,8 +39,6 @@ FEN_TO_TENSOR_METHOD = "fen_to_cnn_tensor"
 
 #model = ChessmaitMlp1()
 #model = ChessmaitMlp2()
-#model = RbfNetwork2()
-#model = RbfNetwork1()
 model = ChessmaitCnn1()
 
 
