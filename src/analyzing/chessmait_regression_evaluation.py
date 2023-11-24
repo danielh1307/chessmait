@@ -10,7 +10,7 @@ import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
 
-from lib.analytics_utilities import evaluation_to_class, remove_mates
+from src.lib.analytics_utilities import evaluation_to_class, remove_mates
 from src.lib.utilities import fen_to_tensor_one_board, write_values_in_bars
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 

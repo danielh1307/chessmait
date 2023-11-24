@@ -20,6 +20,8 @@ pandas = "*"
 seaborn="*"
 scikit-learn="*"
 stockfish="*"
+pettingzoo = "*"
+pygame = "*"
 
 [dev-packages]
 
