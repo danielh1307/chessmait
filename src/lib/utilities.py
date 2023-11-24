@@ -441,9 +441,63 @@ def fen_to_cnn_tensor_alternative(fen):
     # Reshape the tensor to the desired shape (768,)
     return board
 
+def fen_to_tensor_simple(fen):
+    """
+
+    Parameters
+    ----------
+    fen
+
+    Returns
+    -------
+    8x8 board, 6x position, 2x color, draw (one value) 1 for white, 0 for black
+
+    """
+    # Define the piece types
+    pieces = 'pnbrqkPNBRQK'
+    piece_to_index = {
+        'p': 1,
+        'n': 2,
+        'b': 3,
+        'r': 4,
+        'q': 5,
+        'k': 6,
+        'P': 1,
+        'N': 2,
+        'B': 3,
+        'R': 4,
+        'Q': 5,
+        'K': 6
+    }
+
+    # Initialize an empty board
+    board = torch.zeros(8*8*6*2+1)
+
+    # Split the FEN string to get the board layout and current player
+    position, player = fen.split(' ')[0:2]
+
+    # Replace numbers with the corresponding number of empty squares
+    for i in range(1, 9):
+        position = position.replace(str(i), '.' * i)
+
+    # Replace slashes with empty spaces
+    position = position.replace('/', '')
+
+    # Fill the board tensor
+    for i, piece in enumerate(position):
+        if piece in piece_to_index:
+            row = i // 8
+            col = i % 8
+            # print(f'{row} {col} {piece_to_index[piece]} {piece} {(piece_to_index[piece] + col * 6 + row * 6 * 8) + (8*8*6 if piece.isupper() else 0)}')
+            board[((piece_to_index[piece] + col * 6 + row * 6 * 8) + (8*8*6 if piece.isupper() else 0))-1] = 1
+    board[8*8*6*2] = 1 if player == 'w' else 0
+
+    # Reshape the tensor to the desired shape (768,)
+    return board
+
 
 def main():
-    tensor = fen_to_tensor_one_board_dense("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    tensor = fen_to_tensor_simple("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
     print(tensor.shape)
     print(tensor)
     tensor = fen_to_tensor_non_hot_enc_1dim("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
