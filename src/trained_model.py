@@ -42,4 +42,5 @@ model_fluent_mountain_47 = TrainedModel("fluent-mountain-47.pth", 14105, -14905,
 model_divine_leaf_29 = TrainedModel("divine-leaf-29.pth", 12352, -12349, 3, 0)
 model_honest_dragon_72 = TrainedModel("honest-dragon-72.pth", 15265, -15265, 4, 1)
 model_upbeat_cloud_79 = TrainedModel("upbeat-cloud-79.pth", 1000, -1000, 2, 0, use_normalization=False)
+model_lemon_plasma_103 = TrainedModel("lemon-plasma-103.pth", 1000, -1000, 2, 0, use_normalization=False)
 
