@@ -40,6 +40,10 @@ def run():
                 board_status.cache(board)
                 if not no_display:
                     print(f"--------------- Round: {i} --- Moves: {moves:02d} {'white' if is_white else 'black'}", end='')
+                if moves % 20 == 0:
+                    score = engine.analyse(board, chess.engine.Limit(depth=10))["score"]
+                    score = score.white() if score.white().score() is None else score.white().score()
+                    print(f"Reached move {moves} and evaluation is {score}")
 
                 if is_white:
                     play_model_or_engine(board, engine, own_model, is_white, no_display, Player.STOCKFISH)
