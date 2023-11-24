@@ -59,5 +59,5 @@ class RBFNet1(nn.Module):
     def forward(self, x):
         x = self.rbf(x)
         x = self.linear(x)
-        x = torch.tanh(x)
+        x = torch.sigmoid(x)
         return x
