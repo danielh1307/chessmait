@@ -13,6 +13,7 @@ from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 from src.model.ChessmaitCnn5 import ChessmaitCnn5
+from src.model.rbf1 import RBFNet1
 
 
 ############################################################
@@ -58,7 +59,8 @@ PATH_TO_PICKLEFILE = os.path.join("data", "preprocessed")
 # PICKLE_FILES: contains already the correct tensors
 # DATA_FILES: contains FEN position, tensors have to be created
 PICKLE_FILES = []
-# PICKLE_FILES = ["lichess_db_standard_rated_2023-09.1.1.pkl"]
+#PICKLE_FILES = ["lichess_db_standard_rated_2023-03-001.pkl",
+#                "lichess_db_standard_rated_2023-03-002.pkl"]
 DATA_FILES = ["kaggle_preprocessed_1000.csv"]
 
 WANDB_REPORTING = False
@@ -152,7 +154,8 @@ def train_model(_config: argparse.Namespace,
                 _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader,
-                _device: str):
+                _device: str,
+                _model_name: str):
     print("Starting training ...")
     _model.to(_device)
 
@@ -211,7 +214,7 @@ def train_model(_config: argparse.Namespace,
 
         # Save model if validation loss has decreased
         if val_loss < best_val_loss:
-            torch.save(model.state_dict(), "best_model.pth")
+            torch.save(model.state_dict(), _model_name)
             best_val_loss = val_loss
 
     print("Training finished ...")
@@ -231,14 +234,16 @@ if __name__ == "__main__":
 
     train_loader, val_loader = get_dataloaders(config)
 
+    model_name = "best_model.pth"
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
-        wandb.init(project="chessmait", config=vars(config))
+        wand_return = wandb.init(project="chessmait", config=vars(config))
+        model_name = wand_return.name + ".pth"
 
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model
     scheduler = ReduceLROnPlateau(optimizer, 'min')  # 'min' means reducing the LR when the metric stops decreasing
 
-    train_model(config, model, optimizer, scheduler, loss_function, train_loader, val_loader, device)
+    train_model(config, model, optimizer, scheduler, loss_function, train_loader, val_loader, device, model_name)
     wandb.finish()
