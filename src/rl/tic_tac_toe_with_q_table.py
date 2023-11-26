@@ -1,28 +1,32 @@
 # inspired by https://towardsdatascience.com/reinforcement-learning-implement-tictactoe-189582bea542
 
+'''
+Für Tic-Tac-Toe gibt es 255.168 verschiedene Spielverläufe, von denen 131.184 mit einem Sieg des
+ersten Spielers enden, 77.904 mit einem Sieg des zweiten Spielers und 46.080 mit einem Unentschieden
+'''
+import os
+import sys
 from pettingzoo.classic import tictactoe_v3
-import numpy as np
+from src.rl.tic_tac_toe_utilities import *
+import csv
 
-
-COLOR_WIN = '\033[1;91m'
-COLOR_DEFAULT = '\033[0m'
-
-e_greedy = 0.3
 learning_rate = 0.2
 gamma_decay = 0.9
 
 possible_indices = np.arange(9)
 
 
-def run(_env, _q_table):
+def run(_env, _q_table, _e_greedy, training, show):
 
     observation, reward, termination, truncation, info = _env.last()
-
-    cache = np.zeros((9, 9))
 
     rounds = 0
 
     state_table = { _env.agents[0]: [], _env.agents[1]: []}
+    cache = np.zeros((9, 9))
+
+    indexes = [0, 0, 0]
+    winner_name = ""
 
     while not termination and rounds < 10:
 
@@ -30,13 +34,12 @@ def run(_env, _q_table):
         other_agent = _env.agents[np.abs((rounds % 2)-1)]
 
         mask = observation["action_mask"]
-        allowed_indices = possible_indices[mask == 1]
-        next_position_index = -1
-        if np.random.uniform(0, 1) < e_greedy:
-            # set the mask to zeroes, except one randomly selected, possible, index
-            next_position_index = np.random.choice(len(allowed_indices))
+        if np.random.uniform(0, 1) < _e_greedy or not training and agent == 'player_2':
+            action = _env.action_space(agent).sample(mask)
         else:
+            allowed_indices = possible_indices[mask == 1]
             max_val = np.finfo(float).min
+            next_position_index = 0
             for idx in range(len(allowed_indices)):
                 next_board = np.array(_env.board.squares)
                 next_board[allowed_indices[idx]] = 1 if agent == 'player_1' else 2
@@ -45,32 +48,36 @@ def run(_env, _q_table):
                 if value > max_val:
                     max_val = value
                     next_position_index = idx
-        mask = np.zeros(9, dtype=np.int8)
-        mask[allowed_indices[next_position_index]] = 1
-
-        action = _env.action_space(agent).sample(mask)
+            action = allowed_indices[next_position_index]
 
         _env.step(action)
-        state_table[agent].append(np.array(_env.board.squares))
+        if training:
+            state_table[agent].append(np.array(_env.board.squares))
         observation, reward, termination, truncation, info = _env.last()
 
-        cache_board(cache, rounds, _env.board)
+        if not training:
+            cache_board(cache, rounds, _env.board)
         if termination:
-            winner, indexes = check_winner(cache[rounds], _env.board.winning_combinations)
-            if winner:
-                give_reward(_q_table[agent], state_table[agent], 1.0)
-                give_reward(_q_table[other_agent], state_table[other_agent], 0.0)
+            _winner, indexes = check_winner(cache[rounds], _env.board.winning_combinations)
+            if _winner:
                 winner_name = agent
-                print(f"{COLOR_WIN}won by: {agent}{COLOR_DEFAULT}")
+                if training:
+                    give_reward(_q_table[agent], state_table[agent], 1.0)
+                    give_reward(_q_table[other_agent], state_table[other_agent], 0.0)
+                elif show:
+                    print(f"{COLOR_WIN}won by: {agent}{COLOR_DEFAULT}")
             else:
-                give_reward(_q_table[agent], state_table[agent], 0.0)
-                give_reward(_q_table[other_agent], state_table[other_agent], 0.0)
                 winner_name = "draw"
-                print("draw")
+                if training:
+                    give_reward(_q_table[agent], state_table[agent], 0.0)
+                    give_reward(_q_table[other_agent], state_table[other_agent], 0.0)
+                elif show:
+                    print("draw")
 
         rounds += 1
 
-    print_cache(cache, rounds, indexes)
+    if not training and show:
+        print_cache(cache, rounds, indexes)
     return winner_name
 
 
@@ -83,57 +90,65 @@ def give_reward(_q_table, states, reward):
         reward = _q_table[state_hash]
 
 
-def print_cache(cache, _round, indexes):
-    for _i in range(_round):
-        print(f"{_i + 1}-- | ", end='')
-    print()
-    for row in range(3):
-        for r in range(_round):
-            if r == _round-1:
-                print_winner_line(cache[r], row, indexes)
-            else:
-                print_line(cache[r], row)
-        print()
-
-
-def print_line(line, row):
-    for _i in range(3):
-        print(f"{line[row * 3 + _i]:.0f}", end='')
-    print(" | ", end='')
-
-
-def print_winner_line(line, row, indexes):
-    for _i in range(3):
-        if (row * 3 + _i) in indexes and np.sum(indexes) > 0:
-            print(f"{COLOR_WIN}{line[row * 3 + _i]:.0f}{COLOR_DEFAULT}", end='')
-        else:
-            print(f"{line[row * 3 + _i]:.0f}", end='')
-    print(" | ", end='')
-
-
-def cache_board(cache, _round, board):
-    cache[_round] = np.array(board.squares)
-
-
-def check_winner(board, winning_combinations):
-    for win in np.array(winning_combinations):
-        if board[win[0]] == board[win[1]] == board[win[2]]:
-            return True, win
-    return False, [0, 0, 0]
+def get_size_of_q_table(_q_table):
+    size_in_in_bytes = sys.getsizeof(q_table)
+    for k, v in _q_table.items():
+        size_in_in_bytes += sys.getsizeof(k)
+        size_in_in_bytes += sys.getsizeof(v)
+    return size_in_in_bytes
 
 
 if __name__ == "__main__":
-    print("RL start ---")
+    file_name = "tic-tac-toe-statistics.csv"
+    print("RL training start ***")
     env = tictactoe_v3.raw_env()
     env.reset(seed=42)
     q_table = {env.agents[0]: {}, env.agents[1]: {}}
-    games = {}
-    for i in range(100):
-        winner = run(env, q_table)
-        if winner not in games.keys():
-            games[winner] = 0
-        games[winner] += 1
-        env.reset()
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    number_of_round = 0
+    for i in range(1, 1001):
+        number_of_round += 1
+        games = {}
+        print(f"iteration: {i}")
+        number_of_iteration = 0
+        for j in range(1, (i*100)+1):
+            number_of_iteration += 1
+            winner = run(env, q_table, 0.3, True, False)
+            if winner not in games.keys():
+                games[winner] = 0
+            games[winner] += 1
+            env.reset()
+        print_summary(games)
+        with open(file_name, 'a', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow([f"--- training round {number_of_round} with {number_of_iteration} # of iterations ------------"])
+            csvwriter.writerow(["--- player\t#-of-games\tq-table-size"])
+            for k in sorted(games.keys()):
+                if k == 'draw':
+                    csvwriter.writerow([f"{k}\t{games[k]}\t"])
+                else:
+                    csvwriter.writerow([f"{k}\t{games[k]}\t{len(q_table[k])}"])
+        print(f"q-table size: {get_size_of_q_table(q_table)}")
+        print(f"q-table entries player-1: {len(q_table['player_1'])}")
+        print(f"q-table entries player-2: {len(q_table['player_2'])}")
+        print("RL training end ***")
+        print("RL gaming start ***")
+        games = {}
+        number_of_iteration = 0
+        for j in range(1000):
+            number_of_iteration += 1
+            winner = run(env, q_table, 0.0, False, False)
+            if winner not in games.keys():
+                games[winner] = 0
+            games[winner] += 1
+            env.reset()
+        print_summary(games)
+        with open(file_name, 'a', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow([f"*** gaming with {number_of_iteration} # of iterations"])
+            csvwriter.writerow(["*** player\t#-of-games"])
+            for k in sorted(games.keys()):
+                csvwriter.writerow([f"{k}\t{games[k]}"])
+    print("RL gaming end ***")
     env.close()
-    print(games)
-    print("RL end ---")
