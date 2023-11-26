@@ -9,6 +9,7 @@ import sys
 from pettingzoo.classic import tictactoe_v3
 from src.rl.tic_tac_toe_utilities import *
 import csv
+import time
 
 learning_rate = 0.2
 gamma_decay = 0.9
@@ -99,56 +100,44 @@ def get_size_of_q_table(_q_table):
 
 
 if __name__ == "__main__":
-    file_name = "tic-tac-toe-statistics.csv"
-    print("RL training start ***")
+    start = time.time()
+    file_name = "tic-tac-toe-statistics-q-table.csv"
     env = tictactoe_v3.raw_env()
     env.reset(seed=42)
     q_table = {env.agents[0]: {}, env.agents[1]: {}}
     if os.path.isfile(file_name):
         os.remove(file_name)
+    with open(file_name, 'a', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(["#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tp1-q-table-size\tp2-q-table-size"])
     number_of_round = 0
-    for i in range(1, 1001):
+    for i in [10, 20, 40, 60, 80, 100, 200, 400, 600, 800, 1000, 2000, 4000, 6000, 8000, 10000, 20000, 30000, 40000,
+                  50000, 60000, 70000, 80000, 90000, 100000]:
         number_of_round += 1
-        games = {}
+        games_training = {"draw": 0, "player_1": 0, "player_2": 0}
+        print("RL training start ***")
         print(f"iteration: {i}")
         number_of_iteration = 0
-        for j in range(1, (i*100)+1):
+        for j in range(1, i+1):
             number_of_iteration += 1
             winner = run(env, q_table, 0.3, True, False)
-            if winner not in games.keys():
-                games[winner] = 0
-            games[winner] += 1
+            games_training[winner] += 1
             env.reset()
-        print_summary(games)
-        with open(file_name, 'a', newline='') as csvfile:
-            csvwriter = csv.writer(csvfile)
-            csvwriter.writerow([f"--- training round {number_of_round} with {number_of_iteration} # of iterations ------------"])
-            csvwriter.writerow(["--- player\t#-of-games\tq-table-size"])
-            for k in sorted(games.keys()):
-                if k == 'draw':
-                    csvwriter.writerow([f"{k}\t{games[k]}\t"])
-                else:
-                    csvwriter.writerow([f"{k}\t{games[k]}\t{len(q_table[k])}"])
-        print(f"q-table size: {get_size_of_q_table(q_table)}")
-        print(f"q-table entries player-1: {len(q_table['player_1'])}")
-        print(f"q-table entries player-2: {len(q_table['player_2'])}")
+        print_summary(games_training)
         print("RL training end ***")
-        print("RL gaming start ***")
-        games = {}
+        print("RL test start ***")
+        games_test = {"draw": 0, "player_1": 0, "player_2": 0}
         number_of_iteration = 0
         for j in range(1000):
             number_of_iteration += 1
             winner = run(env, q_table, 0.0, False, False)
-            if winner not in games.keys():
-                games[winner] = 0
-            games[winner] += 1
+            games_test[winner] += 1
             env.reset()
-        print_summary(games)
+        print_summary(games_test)
         with open(file_name, 'a', newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow([f"*** gaming with {number_of_iteration} # of iterations"])
-            csvwriter.writerow(["*** player\t#-of-games"])
-            for k in sorted(games.keys()):
-                csvwriter.writerow([f"{k}\t{games[k]}"])
-    print("RL gaming end ***")
+            csvwriter.writerow([f"{i}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{len(q_table['player_1'])}\t{len(q_table['player_2'])}"])
+        print("RL test end ***")
     env.close()
+    end = time.time()
+    print(f"duration: {(end - start):0.1f}ms")
