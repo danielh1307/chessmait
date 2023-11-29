@@ -5,11 +5,9 @@ Für Tic-Tac-Toe gibt es 255.168 verschiedene Spielverläufe, von denen 131.184 
 ersten Spielers enden, 77.904 mit einem Sieg des zweiten Spielers und 46.080 mit einem Unentschieden
 '''
 import os
-import sys
-
-import numpy as np
+import csv
+from collections import deque
 from pettingzoo.classic import tictactoe_v3
-
 import src.train
 from src.rl.tic_tac_toe_utilities import *
 import time
@@ -24,7 +22,7 @@ EPS_END = 0.3
 LR = 0.1
 
 POSSIBLE_INDEXES = np.arange(9)
-MAX_NUMBER_OF_ITERATIONS = 101
+MAX_NUMBER_OF_ITERATIONS = 1_000_001
 
 BOARD_SIZE = 9
 NUM_OF_BOARD_REPRESENTATIONS = 3 # one for player-1 fields, one for player-2 fields, one for empty fields
@@ -57,10 +55,9 @@ class QNetContext:
         self.loss_function = nn.MSELoss()
 
     def optimize(self, states, reward):
-        last_state = states[-1]
+        last_state = states[0]
         self.back_propagate(last_state, reward)
-        del states[-1]
-        for state in reversed(states):
+        for state in list(states)[1:]:
             with torch.no_grad():
                 next_best = self.target_net(board_to_tensor(last_state[0])).argmax().item()
             self.back_propagate(state, reward * next_best)
@@ -95,7 +92,8 @@ def run(_env, training, num_of_iteration):
     observation, reward, termination, truncation, info = _env.last()
 
     rounds = 0
-    state_table = []
+    state_table = deque()
+    cache = np.zeros((9, 9))
 
     while not termination and rounds < 10:
 
@@ -104,13 +102,17 @@ def run(_env, training, num_of_iteration):
         mask = observation["action_mask"]
         action = select_action(_env, state_table, mask, agent, training, num_of_iteration)
 
-        _env.step(action.item())
-        observation, reward, termination, truncation, info = _env.last()
-        state_table.append((np.array(_env.board.squares), action))
+        if training and agent == "player_1":
+            state_table.appendleft((np.array(_env.board.squares), action))
 
+        _env.step(action)
+        observation, reward, termination, truncation, info = _env.last()
+
+        cache_board(cache, rounds, _env.board)
         if termination:
-            _winner, _ = check_winner(state_table[rounds][0], _env.board.winning_combinations)
-            q_net.optimize(state_table, get_reward(_winner, agent))
+            _winner, _ = check_winner(cache[rounds], _env.board.winning_combinations)
+            if training:
+                q_net.optimize(state_table, get_reward(_winner, agent))
 
         rounds += 1
 
@@ -137,17 +139,17 @@ def select_action(_env, states, _mask, _agent, _training, num_of_iteration):
     sample = np.random.random()
     eps_threshold = EPS_START - (EPS_START - EPS_END) * num_of_iteration / MAX_NUMBER_OF_ITERATIONS
     if _agent == "player_1" and eps_threshold > sample and _training or _agent == "player_2":
-        return torch.tensor([_env.action_space(_agent).sample(_mask)], device=device, dtype=torch.long)
+        return _env.action_space(_agent).sample(_mask)
     else:
         if sum(_mask) == 1:
             return _mask.argmax()
         if not states:
             state = np.zeros(BOARD_SIZE)
         else:
-            state = states[-1][0]
-        output = q_net.target_net(board_to_tensor(state))
+            state = states[0][0]
+        output = q_net.policy_net(board_to_tensor(state))
         output[_mask == 0] = min(torch.min(output), 0)
-        return output.argmax()
+        return output.argmax().item()
 
 
 device = src.train.get_device()
@@ -158,6 +160,13 @@ if __name__ == "__main__":
     start = time.time()
     env = tictactoe_v3.raw_env()
     env.reset(seed=42)
+
+    file_name = "tic-tac-toe-statistics-q-net.csv"
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    with open(file_name, 'a', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow(["#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test"])
 
     games_training = {"draw": 0, "player_1": 0, "player_2": 0}
     print("RL training start ***")
@@ -174,11 +183,14 @@ if __name__ == "__main__":
             print_summary(games_training)
             print("RL test start ***")
             games_test = {"draw": 0, "player_1": 0, "player_2": 0}
-            for j in range(100):
+            for j in range(1000):
                 winner = run(env, False, i)
                 games_test[winner] += 1
                 env.reset()
             print_summary(games_test)
+            with open(file_name, 'a', newline='') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow([f"{i}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}"])
             print("RL test end ***")
     print("RL training end ***")
     env.close()

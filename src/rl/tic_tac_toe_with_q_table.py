@@ -44,8 +44,7 @@ def run(_env, _q_table, training, show, num_of_iteration):
             state_table.append(np.array(_env.board.squares))
         observation, reward, termination, truncation, info = _env.last()
 
-        if not training:
-            cache_board(cache, rounds, _env.board)
+        cache_board(cache, rounds, _env.board)
         if termination:
             _winner, indexes = check_winner(cache[rounds], _env.board.winning_combinations)
             if _winner:
