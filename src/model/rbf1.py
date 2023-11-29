@@ -53,11 +53,16 @@ def multiquadric(alpha):
 class RBFNet1(nn.Module):
     def __init__(self):
         super(RBFNet1, self).__init__()
-        self.rbf = RBFLayer1(768, 128, gaussian)
-        self.linear = nn.Linear(128, 1)
+        self.layer1 = nn.Sequential(
+            RBFLayer1(768, 128, gaussian),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(128, 1)
+        )
 
     def forward(self, x):
-        x = self.rbf(x)
-        x = self.linear(x)
-        x = torch.sigmoid(x)
+        x = self.layer1(x)
+        x = self.output_layer(x)
         return x
