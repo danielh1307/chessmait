@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from src.lib.analytics_utilities import remove_mates
 from src.lib.utilities import fen_to_cnn_tensor_alternative
 
 
@@ -31,6 +32,7 @@ class PositionToEvaluationDatasetClassification(Dataset):
             for csv_file in csv_files:
                 print("Loading ", csv_file, " ...")
                 _dataframe = pd.read_csv(csv_file)
+                _dataframe = remove_mates(_dataframe, "Evaluation")
                 _dataframes.append(_dataframe)
 
         self.data = pd.concat(_dataframes, ignore_index=True)
