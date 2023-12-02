@@ -43,7 +43,7 @@ Therefore, it is manually determined, whether there is a winner
 '''
 def check_winner(board, winning_combinations):
     for win in np.array(winning_combinations):
-        if board[win[0]] == board[win[1]] == board[win[2]]:
+        if board[win[0]] != 0 and board[win[0]] == board[win[1]] == board[win[2]]:
             return True, win
     return False, [0, 0, 0]
 
