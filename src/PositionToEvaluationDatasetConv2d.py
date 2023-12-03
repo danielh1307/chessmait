@@ -2,15 +2,20 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from src.lib.utilities import fen_to_cnn_tensor
+from src.lib.utilities import fen_to_bitboard
+#from src.lib.utilities import fen_to_cnn_tensor
 
+USE_NORMALIZATION = False
+USE_CLIPPING = True
+MIN_CLIPPING = -1000
+MAX_CLIPPING = 1000
 
 #########################################################################
 # This class is a dataset which reads .csv files with
 # (FEN) positions and an evaluation.
 #########################################################################
 def to_tensor(fen_position):
-    return fen_to_cnn_tensor(fen_position)
+    return fen_to_bitboard(fen_position)
 
 
 class PositionToEvaluationDatasetConv2d(Dataset):
@@ -44,13 +49,17 @@ class PositionToEvaluationDatasetConv2d(Dataset):
 
         self.data = pd.concat(_dataframes,ignore_index=True)
 
-        # Calculate min and max evaluation scores for normalization
+        if USE_CLIPPING:
+            print("Clip the values between -1000 and 1000")
+            self.data["Evaluation"] = self.data["Evaluation"].clip(lower=MIN_CLIPPING,upper=MAX_CLIPPING)
+
+        # Calculate min and max evaluation scores
         self.min_score = self.data["Evaluation"].min()
         self.max_score = self.data["Evaluation"].max()
 
-        # Normalize the evaluation in the range of [0, 1]
-        print("Normalizing the evaluation ...")
-        self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
+        if USE_NORMALIZATION:
+            print("Normalizing the evaluation ...")
+            self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
         if load_csv:
             print("Converting FEN to tensor ...")

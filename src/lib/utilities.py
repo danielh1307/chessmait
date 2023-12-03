@@ -2,6 +2,7 @@ import chess
 import torch
 import os
 import fnmatch
+import numpy as np
 
 import pandas as pd
 
@@ -494,6 +495,50 @@ def fen_to_tensor_simple(fen):
 
     # Reshape the tensor to the desired shape (768,)
     return board
+
+def fen_to_bitboard(fen):
+    board = chess.Board()
+    board.set_fen(fen)
+
+    # dictionary to store bitboards
+    piece_bitboards = {}
+
+    # for each color (white, black)
+    for color in chess.COLORS:
+
+        # for each piece type (pawn, bishop, knigh, rook, queen, kinb)
+        for piece_type in chess.PIECE_TYPES:
+            v = board.pieces_mask(piece_type,color)
+            symbol = chess.piece_symbol(piece_type)
+            i = symbol.upper() if color else symbol
+            piece_bitboards[i] = v
+
+    fen_to_bitboard()    # empty bitboard
+    piece_bitboards['-'] = board.occupied ^ 2 ** 64 - 1
+
+    # player bitboard (full 1s if player is white, full 0s otherwise)
+    player = 2 ** 64 - 1 if board.turn else 0
+
+    # castling_rights bitboard
+    castling_rights = board.castling_rights
+
+    # en passant bitboard
+    en_passant = 0
+    ep = board.ep_square
+    if ep is not None:
+        en_passant |= (1 << ep)
+
+    # bitboards (16) = 12 for pieces, 1 for empty squares, 1 for player, 1 for castling rights, 1 for en passant
+    bitboards = [b for b in piece_bitboards.values()] + [player] + [castling_rights] + [en_passant]
+
+    # for each bitboard transform integer into a matrix of 1s and 0s
+    # reshape in 3D format (16 x 8 x 8)
+    bitarray = np.array([
+        np.array([(bitboard >> i & 1) for i in range(64)])
+        for bitboard in bitboards
+    ]).reshape((16,8,8))
+
+    return torch.tensor(bitarray, dtype=torch.float32)
 
 
 def main():

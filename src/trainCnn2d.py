@@ -25,13 +25,17 @@ PATH_TO_PICKLEFILE = os.path.join("data", "pickle")
 ############################################################################
 # Make sure these parameters are correctly set before you start the training
 ############################################################################
-DATA_FILES = []
+# Datafiles to load
+PATH_TO_DATAFILE = os.path.join("data", "raw/lichess")
+PATH_TO_PICKLEFILE = os.path.join("data", "raw/lichess")
+# set either PICKLE_FILES or DATA_FILES
+# PICKLE_FILES: contains already the correct tensors
+# DATA_FILES: contains FEN position, tensors have to be created
 PICKLE_FILES = []
-matching_files = [file for file in os.listdir(PATH_TO_PICKLEFILE) if
-                  fnmatch.fnmatch(file, "*.pkl")]
-file_names = [os.path.basename(file) for file in matching_files]
-for file_name in file_names:
-    PICKLE_FILES.append(file_name)
+#PICKLE_FILES = ["lichess_db_standard_rated_2023-03-001.pkl",
+#                "lichess_db_standard_rated_2023-03-002.pkl"]
+DATA_FILES = ["x_lichess_db_standard_rated_2023-03-001.csv","x_lichess_db_standard_rated_2023-03-002.csv","x_lichess_db_standard_rated_2023-03-003.csv"]
+#DATA_FILES = ["kaggle_preprocessed_100.csv"]
 
 WANDB_REPORTING = False
 REGRESSION_TRAINING = True
