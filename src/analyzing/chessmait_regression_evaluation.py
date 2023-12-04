@@ -18,6 +18,17 @@ from src.model.ChessmaitMlp5 import ChessmaitMlp5
 # Helper script for different actions in the context of regression models.
 # See the documentation of the arguments for more information.
 
+# Example usages:
+# Let the model predict all positions in the given CSV-FILE
+# the CSV-FILE is expected to contain a FEN position and a ground truth evaluation
+# $ python chessmait_regression_evaluation.py --fen-evaluation-file=<CSV-FILE>
+
+# Create statistics which compare the ground truth to the prediction
+# DIR is a directory (based on project root) which contains .csv files. The .csv files
+# contain both the ground truth (Stockfish evaluation, column Evaluation)
+# and the prediction from the model (column Evaluation_Predicted)
+# $ python chessmait_regression_evaluation.py --statistics=<DIR>
+
 # Adjust these values for your needs
 # The MAX_EVALUATION and MIN_EVALUATION can be taken from wandb
 model = ChessmaitMlp5()
@@ -87,19 +98,6 @@ def evaluate_fen_by_model(fen_list, device):
         return model(input_batch)
 
 
-def evaluate_fen_command_line(device):
-    while True:
-        fen = input("What is your FEN?")
-        if fen == "q":
-            break
-
-        output = evaluate_fen_by_model([fen], device)
-
-        print(f"My evaluation is: {output}")
-        if NORMALIZATION_USED:
-            print(f"My evaluation normalized is: {reverse_normalization(output.item())}")
-
-
 def evaluate_fen_file(fen_file, device):
     # init some values
     batch_size = 5000
@@ -146,22 +144,6 @@ def evaluate_fen_file(fen_file, device):
         df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
 
     output_file_name = f"{fen_file[0:-4]}_evaluated_{MODEL_NAME}.csv"
-    print(f"Finished, saving the result to {output_file_name} ...")
-    df.to_csv(output_file_name, index=False)
-
-
-def add_classes(fen_file):
-    df = pd.read_csv(fen_file)
-
-    if df["Evaluation"].dtype == 'object':
-        # filter the mates
-        df = df[~df['Evaluation'].str.startswith('#')]
-        df["Evaluation"] = df["Evaluation"].astype(int)
-
-    # get class labels
-    df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
-
-    output_file_name = f"{fen_file[0:-4]}_with_class.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
     df.to_csv(output_file_name, index=False)
 
@@ -352,9 +334,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Chessmait regression evaluator")
 
-    # if set to true, we get a command line, and we can evaluate single FEN positions
-    parser.add_argument("--fen-evaluation", action='store_true', required=False)
-
     # we can predict all the values in the given file
     parser.add_argument("--fen-evaluation-file", type=str, required=False)
 
@@ -364,8 +343,6 @@ if __name__ == "__main__":
     # get the best and worse evaluations
     parser.add_argument("--best-worse", type=str, required=False)
 
-    # we can add class labels to a predicted .csv file
-    parser.add_argument("--add-classes", type=str, required=False)
     args = parser.parse_args()
 
     device = get_device()
@@ -373,12 +350,8 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(f"models/{MODEL_NAME}.pth", map_location=device))
     model.eval()
 
-    if args.fen_evaluation:
-        evaluate_fen_command_line(device)
-    elif args.statistics:
+    if args.statistics:
         create_statistics(args.statistics)
-    elif args.add_classes:
-        add_classes(args.add_classes)
     elif args.fen_evaluation_file:
         evaluate_fen_file(args.fen_evaluation_file, device)
     elif args.best_worse:
