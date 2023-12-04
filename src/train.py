@@ -76,29 +76,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=
 
 #################################################################################################
 
-def get_device(print_message=True):
-    """
-    Checks which device is most appropriate to perform the training.
-    If cuda is available, cuda is returned, otherwise mps or cpu.
-
-    Returns
-    -------
-    str
-        the device which is used to perform the training.
-
-    """
-    _device = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
-
-    if print_message:
-        print(f"For this training, we are going to use {_device} device ...")
-    return _device
-
 
 def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, DataLoader):
     """

@@ -1,14 +1,37 @@
-import chess
-import torch
-import os
 import fnmatch
-import numpy as np
+import os
 
+import chess
+import numpy as np
 import pandas as pd
+import torch
 
 CLASS_WIN = 1
 CLASS_DRAW = 0
 CLASS_LOSS = 2
+
+
+def get_device():
+    """
+    Checks which device is most appropriate to perform the training.
+    If cuda is available, cuda is returned, otherwise mps or cpu.
+
+    Returns
+    -------
+    str
+        the device which is used to perform the training.
+
+    """
+    _device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )
+
+    print(f"We are going to use {_device} device ...")
+    return _device
 
 
 def get_files_from_pattern(directory, file_pattern):
@@ -150,7 +173,7 @@ def fen_to_tensor(fen):
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
             result[piece_layer, sq] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
-                                     (-1 if board.turn == chess.WHITE else 1)
+                                      (-1 if board.turn == chess.WHITE else 1)
     return result
 
 
@@ -196,7 +219,7 @@ def fen_to_cnn_tensor(fen):
                 piece_layer = int(piece_type or 0) + 6
             piece_layer = piece_layer - 1
             result[piece_layer, int(sq / 8), sq % 8] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
-                                                     (1 if board.turn == chess.WHITE else -1)
+                                                       (1 if board.turn == chess.WHITE else -1)
     return result
 
 
@@ -442,6 +465,7 @@ def fen_to_cnn_tensor_alternative(fen):
     # Reshape the tensor to the desired shape (768,)
     return board
 
+
 def fen_to_tensor_simple(fen):
     """
 
@@ -472,7 +496,7 @@ def fen_to_tensor_simple(fen):
     }
 
     # Initialize an empty board
-    board = torch.zeros(8*8*6*2+1)
+    board = torch.zeros(8 * 8 * 6 * 2 + 1)
 
     # Split the FEN string to get the board layout and current player
     position, player = fen.split(' ')[0:2]
@@ -490,11 +514,12 @@ def fen_to_tensor_simple(fen):
             row = i // 8
             col = i % 8
             # print(f'{row} {col} {piece_to_index[piece]} {piece} {(piece_to_index[piece] + col * 6 + row * 6 * 8) + (8*8*6 if piece.isupper() else 0)}')
-            board[((piece_to_index[piece] + col * 6 + row * 6 * 8) + (8*8*6 if piece.isupper() else 0))-1] = 1
-    board[8*8*6*2] = 1 if player == 'w' else 0
+            board[((piece_to_index[piece] + col * 6 + row * 6 * 8) + (8 * 8 * 6 if piece.isupper() else 0)) - 1] = 1
+    board[8 * 8 * 6 * 2] = 1 if player == 'w' else 0
 
     # Reshape the tensor to the desired shape (768,)
     return board
+
 
 def fen_to_bitboard(fen):
     board = chess.Board()
@@ -508,12 +533,12 @@ def fen_to_bitboard(fen):
 
         # for each piece type (pawn, bishop, knigh, rook, queen, kinb)
         for piece_type in chess.PIECE_TYPES:
-            v = board.pieces_mask(piece_type,color)
+            v = board.pieces_mask(piece_type, color)
             symbol = chess.piece_symbol(piece_type)
             i = symbol.upper() if color else symbol
             piece_bitboards[i] = v
 
-    fen_to_bitboard()    # empty bitboard
+    fen_to_bitboard()  # empty bitboard
     piece_bitboards['-'] = board.occupied ^ 2 ** 64 - 1
 
     # player bitboard (full 1s if player is white, full 0s otherwise)
@@ -536,7 +561,7 @@ def fen_to_bitboard(fen):
     bitarray = np.array([
         np.array([(bitboard >> i & 1) for i in range(64)])
         for bitboard in bitboards
-    ]).reshape((16,8,8))
+    ]).reshape((16, 8, 8))
 
     return torch.tensor(bitarray, dtype=torch.float32)
 

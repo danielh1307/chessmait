@@ -1,8 +1,8 @@
 import argparse
+import math
 import os
 import random
 import time
-import math
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -12,6 +12,7 @@ from sklearn.metrics import confusion_matrix
 
 from src.lib.analytics_utilities import evaluation_to_class, remove_mates
 from src.lib.utilities import fen_to_tensor_one_board, write_values_in_bars
+from src.lib.utilities import get_device
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # Helper script for different actions in the context of regression models.
@@ -68,29 +69,6 @@ CLASSES = {
         "max": -400,
     }
 }
-
-
-def get_device():
-    """
-    Checks which device is most appropriate to perform the training.
-    If cuda is available, cuda is returned, otherwise mps or cpu.
-
-    Returns
-    -------
-    str
-        the device which is used to perform the training.
-
-    """
-    _device = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
-
-    print(f"We are going to use {_device} device ...")
-    return _device
 
 
 def fen_to_tensor(fen):
@@ -383,7 +361,7 @@ if __name__ == "__main__":
     # we can create statistics based on a predicted .csv file
     parser.add_argument("--statistics", type=str, required=False)
 
-    # get best and worse evaluations
+    # get the best and worse evaluations
     parser.add_argument("--best-worse", type=str, required=False)
 
     # we can add class labels to a predicted .csv file
