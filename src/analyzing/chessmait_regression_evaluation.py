@@ -29,6 +29,12 @@ from src.model.ChessmaitMlp5 import ChessmaitMlp5
 # and the prediction from the model (column Evaluation_Predicted)
 # $ python chessmait_regression_evaluation.py --statistics=<DIR>
 
+# Get the best and worst predictions
+# DIR is a directory (based on project root) which contains .csv files. The .csv files
+# contain both the ground truth (Stockfish evaluation, column Evaluation)
+# and the prediction from the model (column Evaluation_Predicted)
+# $ python chessmait_regression_evaluation.py --best-worst=<DIR>
+
 # Adjust these values for your needs
 # The MAX_EVALUATION and MIN_EVALUATION can be taken from wandb
 model = ChessmaitMlp5()
@@ -148,7 +154,7 @@ def evaluate_fen_file(fen_file, device):
     df.to_csv(output_file_name, index=False)
 
 
-def smallest_and_highest_differences(fen_directory_evaluated):
+def get_concatenated_df_from_directory(fen_directory_evaluated):
     dfs = []
     for fen_file_evaluated in os.listdir(fen_directory_evaluated):
         if not fen_file_evaluated.endswith(".csv"):
@@ -159,9 +165,13 @@ def smallest_and_highest_differences(fen_directory_evaluated):
         _df["Evaluation_Predicted"] = _df["Evaluation_Predicted"].astype(int)
         dfs.append(_df)
 
-    df = pd.concat(dfs, ignore_index=True)
+    return pd.concat(dfs, ignore_index=True)
 
-    print(f"Creating statistics for {fen_directory_evaluated}, which are {len(df)} positions ...")
+
+def smallest_and_highest_differences(fen_directory_evaluated):
+    df = get_concatenated_df_from_directory(fen_directory_evaluated)
+
+    print(f"Creating best and worst evaluations for {fen_directory_evaluated}, which are {len(df)} positions ...")
 
     # remove clipped values
     if CLIPPING_USED:
@@ -175,28 +185,20 @@ def smallest_and_highest_differences(fen_directory_evaluated):
     # add absolute difference
     df["Diff"] = abs(df["Evaluation"] - df["Evaluation_Predicted"])
 
-    # get best and worse evaluations
+    # get the best and worst evaluations
     best_evaluations = df.nsmallest(10, "Diff")
     worse_evaluations = df.nlargest(10, "Diff")
 
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
+    print("Best evaluations:")
     print(best_evaluations.to_string(index=False))
+    print("\n\nWorst evaluations:")
     print(worse_evaluations.to_string(index=False))
 
 
 def create_statistics(fen_directory_evaluated):
-    dfs = []
-    for fen_file_evaluated in os.listdir(fen_directory_evaluated):
-        if not fen_file_evaluated.endswith(".csv"):
-            continue
-        print(f"Reading file {fen_file_evaluated} ...")
-        _df = pd.read_csv(os.path.join(fen_directory_evaluated, fen_file_evaluated))
-        _df = remove_mates(_df, 'Evaluation')
-        _df["Evaluation_Predicted"] = _df["Evaluation_Predicted"].astype(int)
-        dfs.append(_df)
-
-    df = pd.concat(dfs, ignore_index=True)
+    df = get_concatenated_df_from_directory(fen_directory_evaluated)
 
     print(f"Creating statistics for {fen_directory_evaluated}, which are {len(df)} positions ...")
 
@@ -340,8 +342,8 @@ if __name__ == "__main__":
     # we can create statistics based on a predicted .csv file
     parser.add_argument("--statistics", type=str, required=False)
 
-    # get the best and worse evaluations
-    parser.add_argument("--best-worse", type=str, required=False)
+    # get the best and worst evaluations
+    parser.add_argument("--best-worst", type=str, required=False)
 
     args = parser.parse_args()
 
@@ -354,5 +356,5 @@ if __name__ == "__main__":
         create_statistics(args.statistics)
     elif args.fen_evaluation_file:
         evaluate_fen_file(args.fen_evaluation_file, device)
-    elif args.best_worse:
-        smallest_and_highest_differences(args.best_worse)
+    elif args.best_worst:
+        smallest_and_highest_differences(args.best_worst)
