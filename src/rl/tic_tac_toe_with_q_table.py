@@ -10,7 +10,6 @@ from collections import deque
 
 from pettingzoo.classic import tictactoe_v3
 from src.rl.tic_tac_toe_utilities import *
-import csv
 import time
 
 GAMMA = 0.9
@@ -80,9 +79,8 @@ if __name__ == "__main__":
     file_name = "tic-tac-toe-statistics-q-table.csv"
     if os.path.isfile(file_name):
         os.remove(file_name)
-    with open(file_name, 'a', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(["#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tq-table-size"])
+    with open(file_name, 'a') as f:
+        f.write("#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tq-table-size\n")
 
     games_training = {"draw": 0, "player_1": 0, "player_2": 0}
 
@@ -164,16 +162,14 @@ if __name__ == "__main__":
             print(f"player-1:  {games_training['player_1']:8}\t{games_test['player_1']:8}")
             print(f"player-2:  {games_training['player_2']:8}\t{games_test['player_2']:8}")
 
-            with open(file_name, 'a', newline='') as csvfile:
-                csvwriter = csv.writer(csvfile)
-                csvwriter.writerow([f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{len(q_table)}"])
+            with open(file_name, 'a') as f:
+                f.write(f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{len(q_table)}\n")
 
     print("-----------------------------")
     print("RL training end ***")
 
     env.close()
     end = time.time()
-    with open(file_name, 'a', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow([f"duration: {(end - start):0.1f}s"])
+    with open(file_name, 'a', newline='') as f:
+        f.write(f"duration: {(end - start):0.1f}s\n")
     print(f"duration: {(end - start):0.1f}s")
