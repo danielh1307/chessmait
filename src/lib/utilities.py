@@ -538,7 +538,7 @@ def fen_to_bitboard(fen):
             i = symbol.upper() if color else symbol
             piece_bitboards[i] = v
 
-    fen_to_bitboard()  # empty bitboard
+    # empty bitboard
     piece_bitboards['-'] = board.occupied ^ 2 ** 64 - 1
 
     # player bitboard (full 1s if player is white, full 0s otherwise)
@@ -563,7 +563,7 @@ def fen_to_bitboard(fen):
         for bitboard in bitboards
     ]).reshape((16, 8, 8))
 
-    return torch.tensor(bitarray, dtype=torch.float32)
+    return torch.tensor(bitarray, dtype=torch.float32, device='mps')
 
 
 def main():
