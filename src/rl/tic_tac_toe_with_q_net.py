@@ -5,16 +5,15 @@
 Für Tic-Tac-Toe gibt es 255.168 verschiedene Spielverläufe, von denen 131.184 mit einem Sieg des
 ersten Spielers enden, 77.904 mit einem Sieg des zweiten Spielers und 46.080 mit einem Unentschieden
 '''
+import copy
 import os
-import csv
 from pettingzoo.classic import tictactoe_v3
-import src.train
 from src.rl.tic_tac_toe_utilities import *
+import numpy as np
 import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 import random
 from collections import deque, namedtuple
 
@@ -23,8 +22,7 @@ EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
 MIN_EPS = 0.1 # ...until this minimum eps is reached
 GAMMA = 0.95 # discount
 MAX_MEMORY_SIZE = 10000 # size of the replay memory
-BATCH_SIZE = 50 # batch size of the neural network training
-MIN_LENGTH = 50 # minimum length of the replay memory for training, before it reached this length, no gradient updates happen
+BATCH_SIZE = 64 # batch size of the neural network training
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 9
@@ -32,20 +30,31 @@ BOARD_SIZE = 9
 class QNet(nn.Module):
     def __init__(self):
         super(QNet, self).__init__()
-
-        self.layer1 = nn.Linear(BOARD_SIZE, 128)
-        self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, 128)
-        self.layer4 = nn.Linear(128, 128)
-        self.layer5 = nn.Linear(128, BOARD_SIZE)
+        self.layer1 = nn.Sequential(
+            nn.Linear(BOARD_SIZE, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.layer2 = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.layer3 = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(128, BOARD_SIZE)
+        )
         self.double()
 
     def forward(self, x):
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        x = F.relu(self.layer3(x))
-        x = F.relu(self.layer4(x))
-        return self.layer5(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        return self.output_layer(x)
 
 
 class QNetContext:
@@ -56,21 +65,19 @@ class QNetContext:
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net = self.target_net.eval()
 
-        self.optimizer = optim.Adam(self.policy_net.parameters())
-        self.loss_function = nn.MSELoss()
+        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=1e-4, amsgrad=True)
+        self.loss_function = nn.SmoothL1Loss()
 
     def optimize(self, replay_memory, batch_size):
-        batch = replay_memory.structured_sample(batch_size)  # get samples from the replay memory
+        batch = replay_memory.structured_sample(batch_size) # get samples from the replay memory
 
         self.optimizer.zero_grad()
         with torch.no_grad():
-            expected_indexes = batch["reward"] + GAMMA * self.target_net(batch["next_state"]).argmax(axis=1) * (1 - batch["done"])  # R(s, a) + γ·maxₐ N(s') if not a terminal state, otherwise R(s, a)
-        predicted = self.policy_net(batch["state"])
+            expected = batch["reward"] + GAMMA * self.target_net(batch["next_state"]).argmax(axis=1) * (1 - batch["done"])  # R(s, a) + γ·maxₐ N(s') if not a terminal state, otherwise R(s, a)
 
-        for i in range(batch_size): # set the target for the action that was done and leave the outputs of other actions as they are
-            predicted[i][batch["action"][i]] = expected_indexes[i]
+        predicted = self.policy_net(batch["state"]).gather(1, batch["action"].unsqueeze(1)).flatten()
 
-        loss = self.loss_function(batch["state"], predicted)
+        loss = self.loss_function(predicted, expected)
 
         loss.backward()
         self.optimizer.step()
@@ -82,25 +89,15 @@ def board_to_tensor(state):
     return torch.tensor(np.array([state.copy()]), device=device, dtype=float).flatten()
 
 
-device = src.train.get_device()
+device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 q_net = QNetContext()
 env = tictactoe_v3.raw_env()
 env.reset(seed=42)
 eps = 0.3 # exploration rate, probability of choosing random action
-memory_parts = ["state_history", "reward", "done"]
+memory_parts = ["state_history", "reward"]
 Memory = namedtuple("Memory", memory_parts)
-state_parts = ["state_from", "state_to", "action"]
+state_parts = ["state_from", "state_to", "action", "done"]
 StateMemory = namedtuple("StateMemory", state_parts)
-
-
-def get_reward(agent):
-    winner, _ = check_winner(env.board.squares, env.board.winning_combinations)
-    if winner and agent == "player_1":
-        return 1
-    elif winner and agent == "player_2":
-        return -1
-    else:
-        return 0
 
 
 def get_winner_name(_winner, player):
@@ -126,11 +123,10 @@ class ReplayMemory:
         intermediate = {"state":[],"action":[],"next_state":[],"reward":[],"done":[]}
         for b in batch:
             state_history = b[0]
-            reward = b[1] * 1.33
-            done = b[2]
+            reward = b[1]
             for s in state_history:
-                reward *= 0.75
-                intermediate["done"].append(done)
+                reward *= 0.5
+                intermediate["done"].append(s[3])
                 intermediate["reward"].append(reward)
                 intermediate["state"].append(s[0])
                 intermediate["next_state"].append(s[1])
@@ -174,98 +170,116 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    file_name = "tic-tac-toe.pth"
-    if not os.path.isfile(file_name):
+    file_name = "tic-tac-toe-statistics-q-net.csv"
+    if os.path.isfile(file_name):
+        os.remove(file_name)
+    with open(file_name, 'a') as f:
+        f.write("#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\tbest-loss-history\n")
 
-        print("RL training start ***")
+    games_training = {"draw": 0, "player_1": 0, "player_2": 0}
 
-        replay_memory = ReplayMemory(max_length=MAX_MEMORY_SIZE)
+    print("RL training start ***")
 
-        best_loss = float('inf')
+    replay_memory = ReplayMemory(max_length=MAX_MEMORY_SIZE)
 
-        for episode in range(10000):
+    best_loss = float('inf')
+    best_loss_history = []
 
-            env.reset()
-            rounds = 0
-            state_table = deque()
+    for episode_training in range(100001):
 
-            observation, reward, termination, truncation, info = env.last()
-
-            while not termination:
-                agent = env.agents[rounds % 2]
-                mask = observation["action_mask"]
-                action = select_training_action(mask, agent)
-
-                state = env.board.squares.copy()
-                env.step(action)
-                observation, reward, termination, truncation, info = env.last()
-                if agent == "player_1":
-                    state_table.appendleft(StateMemory(state, env.board.squares.copy(), action))
-                if termination:
-                    reward = get_reward(agent)
-                    memory = Memory(state_table.copy(), reward, termination)
-                    replay_memory.store(memory)
-
-                if len(replay_memory) >= MIN_LENGTH and agent == "player_1":
-                    loss = q_net.optimize(replay_memory, BATCH_SIZE)
-                    if loss < best_loss:
-                        best_loss = loss
-                        q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
-
-                rounds += 1
-
-            eps = max(MIN_EPS, eps * EPS_DECAY)
-
-            if episode % 200 == 0:
-                print(f"loss after {episode} episodes: {best_loss:.3}")
-
-        torch.save(q_net.target_net.state_dict(), file_name)
-
-        print(f"RL training end ***")
-
-    print("RL test start ***")
-
-    model = QNet().to(device)
-    model.load_state_dict(torch.load(file_name, map_location=device))
-    model.eval()
-
-    games = {"draw": 0, "player_1": 0, "player_2": 0}
-
-    for i in range(1000):
-
-        cache = np.zeros((9, 9))
         env.reset()
         rounds = 0
-        indexes = [0, 0, 0]
-        winner_name = ""
+        state_table = deque()
 
         observation, reward, termination, truncation, info = env.last()
+
+        winner_name = ""
 
         while not termination:
             agent = env.agents[rounds % 2]
             mask = observation["action_mask"]
-            action = select_testing_action(mask, agent, model)
+            action = select_training_action(mask, agent)
 
+            state = env.board.squares.copy()
             env.step(action)
             observation, reward, termination, truncation, info = env.last()
+            if agent == "player_1":
+                state_table.appendleft(StateMemory(state, env.board.squares.copy(), action, termination))
 
-            cache_board(cache, rounds, env.board)
+            if len(replay_memory) >= BATCH_SIZE and agent == "player_1":
+                loss = q_net.optimize(replay_memory, BATCH_SIZE)
+                if loss < best_loss:
+                    best_loss = loss
+                    q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
 
             rounds += 1
 
-        winner, indexes = check_winner(cache[rounds-1], env.board.winning_combinations)
-        if winner:
-            winner_name = agent
-            #print(f"{COLOR_WIN}won by: {agent}{COLOR_DEFAULT}")
-        else:
-            winner_name = "draw"
-            #print("draw")
-        #print_cache(cache, rounds, indexes)
-        games[winner_name] += 1
+        reward, winner_name = get_reward(env, agent)
+        memory = Memory(state_table.copy(), reward)
+        replay_memory.store(memory)
 
-    print_summary(games)
+        eps = max(MIN_EPS, eps * EPS_DECAY)
+        games_training[winner_name] += 1
 
-    print("RL test start ***")
+        if episode_training % 100 == 0 and episode_training != 0:
+            best_loss_history.append(best_loss)
+            print(f"episode: {episode_training} - best-loss: {best_loss}")
+
+        if episode_training % 1000 == 0 and episode_training != 0:
+
+            print("-----------------------------")
+            print(f"Tests episode: {episode_training}")
+
+            games_test = {"draw": 0, "player_1": 0, "player_2": 0}
+
+            for episode_test in range(1000):
+
+                model = copy.deepcopy(q_net.target_net)
+                model.eval()
+
+                env.reset()
+                cache = np.zeros((9, 9))
+                winner_name = ""
+                rounds_test = 0
+
+                observation, reward, termination, truncation, info = env.last()
+
+                while not termination:
+                    agent = env.agents[rounds_test % 2]
+                    mask = observation["action_mask"]
+                    action = select_testing_action(mask, agent, model)
+
+                    env.step(action)
+                    observation, reward, termination, truncation, info = env.last()
+                    cache_board(cache, rounds_test, env.board)
+
+                    rounds_test += 1
+
+                winner, _ = check_winner(cache[rounds_test-1], env.board.winning_combinations)
+                if winner:
+                    winner_name = agent
+                else:
+                    winner_name = "draw"
+
+                games_test[winner_name] += 1
+
+            print("Player     Training     Test")
+            print(f"draw:      {games_training['draw']:8}\t{games_test['draw']:8}")
+            print(f"player-1:  {games_training['player_1']:8}\t{games_test['player_1']:8}")
+            print(f"player-2:  {games_training['player_2']:8}\t{games_test['player_2']:8}")
+
+            with open(file_name, 'a') as f:
+                f.write(f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{best_loss}\t{best_loss_history}\n")
+
+            best_loss_history.clear()
+
+    torch.save(q_net.target_net.state_dict(), "tic-tac-toe.pth")
+
+    print("-----------------------------")
+    print("RL training end ***")
+
     env.close()
     end = time.time()
+    with open(file_name, 'a') as f:
+        f.write(f"duration: {(end - start):0.1f}s\n")
     print(f"duration: {(end - start):0.1f}s")

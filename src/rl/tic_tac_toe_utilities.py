@@ -55,4 +55,13 @@ def print_summary(_games):
     print("----------------------")
 
 
+def get_reward(env, agent):
+    winner, _ = check_winner(env.board.squares, env.board.winning_combinations)
+    if winner and agent == "player_1":
+        return 1.0, agent
+    elif winner and agent == "player_2":
+        return -1.0, agent
+    else:
+        return 0, "draw"
+
 
