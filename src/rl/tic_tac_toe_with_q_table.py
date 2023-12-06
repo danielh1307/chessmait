@@ -1,4 +1,5 @@
 # inspired by https://towardsdatascience.com/reinforcement-learning-implement-tictactoe-189582bea542
+# and https://nestedsoftware.com/2019/12/27/tic-tac-toe-with-a-neural-network-1fjn.206436.html
 
 '''
 Für Tic-Tac-Toe gibt es 255.168 verschiedene Spielverläufe, von denen 131.184 mit einem Sieg des
@@ -15,7 +16,7 @@ import time
 GAMMA = 0.9
 EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
 MIN_EPS = 0.1 # ...until this minimum eps is reached
-LR = 0.1
+LR = 0.4
 
 POSSIBLE_INDEXES = np.arange(9)
 MAX_NUMBER_OF_ITERATIONS = 1_000_001
@@ -56,12 +57,46 @@ def get_greedy_action(mask):
 
 
 def give_reward(states, reward):
-    for state in states:
-        state_hash = str(state)
-        if q_table.get(state_hash) is None:
-            q_table[state_hash] = 0.0
-        q_table[state_hash] += LR * (GAMMA * reward - q_table[state_hash])
-        reward = q_table[state_hash]
+    state_next, action_next = states[0]
+    current_q_value = get_q_value(state_next, action_next)
+    new_q_value = calculate_new_q_value(current_q_value, reward,0.0)
+    update_q_value(state_next, action_next, new_q_value)
+
+    for state, action_next in list(states)[1:]:
+
+        max_next_q_value = get_max_q_value(state_next)
+
+        current_q_value = get_q_value(state, action_next)
+        new_q_value = calculate_new_q_value(current_q_value, 0.0, max_next_q_value)
+        update_q_value(state, action_next, new_q_value)
+
+        state_next = state
+
+
+def get_max_q_value(state):
+    actions = [i for i in range(len(state)) if state[i] == 0]
+    q_values = [get_q_value(state, action) for action in actions]
+    return max(q_values)
+
+
+def get_q_value(state, action_next):
+    state = state.copy()
+    state[action_next] = 1
+    state_hash = str(state)
+    if q_table.get(state_hash) is None:
+        q_table[state_hash] = 0.0
+    return q_table[state_hash]
+
+
+def update_q_value(state, action_next, q_value):
+    state = state.copy()
+    state[action_next] = 1
+    state_hash = str(state)
+    q_table[state_hash] = q_value
+
+
+def calculate_new_q_value(current_qvalue, reward, max_next_qvalue):
+    return (1 - LR) * current_qvalue + (LR * (reward + GAMMA * max_next_qvalue))
 
 
 def get_size_of_q_table():
@@ -102,10 +137,11 @@ if __name__ == "__main__":
             mask = observation["action_mask"]
             action = select_training_action(mask, agent)
 
+            if agent == "player_1":
+                state_table.appendleft((np.array(env.board.squares), action))
+
             env.step(action)
             observation, reward, termination, truncation, info = env.last()
-            if agent == "player_1":
-                state_table.appendleft(np.array(env.board.squares))
             cache_board(cache, rounds_training, env.board)
 
             rounds_training += 1
