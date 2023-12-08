@@ -12,8 +12,7 @@ from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
-from src.model.ChessmaitCnn5 import ChessmaitCnn5
-from src.model.rbf1 import RBFNet1
+from src.lib.utilities import get_device
 
 
 ############################################################
