@@ -26,34 +26,39 @@ BATCH_SIZE = 64 # batch size of the neural network training
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 9
+IN_FEATURES = BOARD_SIZE
+OUT_FEATURES = 16
+
 
 class QNet(nn.Module):
     def __init__(self):
         super(QNet, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Linear(BOARD_SIZE, 128),
+            nn.Linear(IN_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer2 = nn.Sequential(
-            nn.Linear(128, 128),
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
+        '''
         self.layer3 = nn.Sequential(
-            nn.Linear(128, 128),
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
+        '''
         self.output_layer = nn.Sequential(
-            nn.Linear(128, BOARD_SIZE)
+            nn.Linear(OUT_FEATURES, BOARD_SIZE)
         )
         self.double()
 
     def forward(self, x):
         x = self.layer1(x)
         x = self.layer2(x)
-        x = self.layer3(x)
+        #x = self.layer3(x)
         return self.output_layer(x)
 
 
@@ -70,23 +75,64 @@ class QNetContext:
 
     def optimize(self, replay_memory, batch_size):
         batch = replay_memory.structured_sample(batch_size) # get samples from the replay memory
+        sum_loss = 0.0
+        loss_counter = 0
+        for b in batch:
+            state_history = b[0]
+            reward = b[1]
+            state_next, action_next = state_history[0]
+            sum_loss += self.backpropagate(state_next, action_next, reward)
+            loss_counter += 1
 
+            for state, action_next in list(state_history)[1:]:
+                with torch.no_grad():
+                    next_q_values = self.get_q_values(state_next, self.target_net)
+                    q_value_max = torch.max(next_q_values).item()
+                sum_loss += self.backpropagate(state, action_next, q_value_max * GAMMA)
+                loss_counter += 1
+                state_next = state
+
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+
+        return sum_loss / loss_counter
+
+    def backpropagate(self, state, action, reward):
         self.optimizer.zero_grad()
-        with torch.no_grad():
-            expected = batch["reward"] + GAMMA * self.target_net(batch["next_state"]).argmax(axis=1) * (1 - batch["done"])  # R(s, a) + γ·maxₐ N(s') if not a terminal state, otherwise R(s, a)
+        output = self.policy_net(board_to_tensor(board_to_tri_state(state)))
 
-        predicted = self.policy_net(batch["state"]).gather(1, batch["action"].unsqueeze(1)).flatten()
+        target = output.clone().detach()
+        target[action] = reward
+        illegal_actions = [i for i in range(len(state)) if state[i] != 0]
+        for a in illegal_actions:
+            target[a] = 0.0
 
-        loss = self.loss_function(predicted, expected)
-
+        loss = self.loss_function(output, target)
         loss.backward()
         self.optimizer.step()
-
         return loss.item()
+
+    def get_q_values(self, state, model):
+        inputs = board_to_tensor(board_to_tri_state(state))
+        outputs = model(inputs)
+        return outputs
 
 
 def board_to_tensor(state):
     return torch.tensor(np.array([state.copy()]), device=device, dtype=float).flatten()
+
+
+def board_to_tri_state(state):
+    return state
+    '''
+    result = np.array([state.copy(),state.copy(),state.copy()])
+    result[0][result[0] != 1] = 0
+    result[1][result[1] != 2] = 0
+    result[1][result[1] == 2] = 1
+    result[2][result[2] == 0] = 3
+    result[2][result[2] != 3] = 0
+    result[2][result[2] == 3] = 1
+    return result.flatten()
+    '''
 
 
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -96,8 +142,6 @@ env.reset(seed=42)
 eps = 0.3 # exploration rate, probability of choosing random action
 memory_parts = ["state_history", "reward"]
 Memory = namedtuple("Memory", memory_parts)
-state_parts = ["state_from", "state_to", "action", "done"]
-StateMemory = namedtuple("StateMemory", state_parts)
 
 
 def get_winner_name(_winner, player):
@@ -119,26 +163,8 @@ class ReplayMemory:
         return random.sample(self.memory, k)
 
     def structured_sample(self, k):
-        batch = self._sample(k)
-        intermediate = {"state":[],"action":[],"next_state":[],"reward":[],"done":[]}
-        for b in batch:
-            state_history = b[0]
-            reward = b[1]
-            for s in state_history:
-                reward *= 0.5
-                intermediate["done"].append(s[3])
-                intermediate["reward"].append(reward)
-                intermediate["state"].append(s[0])
-                intermediate["next_state"].append(s[1])
-                intermediate["action"].append(s[2])
-        result = {}
-        for key in intermediate.keys():
-            if key == "action":
-                result[key] = torch.tensor(np.array(intermediate[key]), device=device, dtype=int)
-            else:
-                result[key] = torch.tensor(np.array(intermediate[key]), device=device, dtype=float)
+        return self._sample(k)
 
-        return result
 
     def __len__(self):
         return len(self.memory)
@@ -150,7 +176,7 @@ def select_training_action(mask, agent):
     else:
         if sum(mask) == 1:
             return mask.argmax().item()
-        output = q_net.policy_net(board_to_tensor(env.board.squares))
+        output = q_net.get_q_values(env.board.squares, q_net.policy_net)
         output[mask == 0] = min(torch.min(output), 0)
         return output.argmax().item()
 
@@ -161,7 +187,7 @@ def select_testing_action(mask, agent, model):
     else:
         if sum(mask) == 1:
             return mask.argmax()
-        output = model(board_to_tensor(env.board.squares))
+        output = model(board_to_tensor(board_to_tri_state(env.board.squares)))
         output[mask == 0] = min(torch.min(output), 0)
         return output.argmax().item()
 
@@ -185,7 +211,7 @@ if __name__ == "__main__":
     best_loss = float('inf')
     best_loss_history = []
 
-    for episode_training in range(100001):
+    for episode_training in range(10001):
 
         env.reset()
         rounds = 0
@@ -200,11 +226,11 @@ if __name__ == "__main__":
             mask = observation["action_mask"]
             action = select_training_action(mask, agent)
 
-            state = env.board.squares.copy()
+            if agent == "player_1":
+                state_table.appendleft((env.board.squares.copy(), action))
+
             env.step(action)
             observation, reward, termination, truncation, info = env.last()
-            if agent == "player_1":
-                state_table.appendleft(StateMemory(state, env.board.squares.copy(), action, termination))
 
             if len(replay_memory) >= BATCH_SIZE and agent == "player_1":
                 loss = q_net.optimize(replay_memory, BATCH_SIZE)
