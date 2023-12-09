@@ -5,7 +5,7 @@ from src.lib.analytics_utilities import remove_mates
 from src.lib.utilities import fen_to_tensor_one_board, dataframe_from_files
 
 USE_NORMALIZATION = False
-USE_CLIPPING = True
+USE_CLIPPING = False
 MIN_CLIPPING = -1000
 MAX_CLIPPING = 1000
 
