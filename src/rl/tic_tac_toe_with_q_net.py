@@ -22,7 +22,7 @@ EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
 MIN_EPS = 0.1 # ...until this minimum eps is reached
 GAMMA = 0.95 # discount
 MAX_MEMORY_SIZE = 10000 # size of the replay memory
-BATCH_SIZE = 64 # batch size of the neural network training
+BATCH_SIZE = 32 # batch size of the neural network training
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 9
@@ -76,29 +76,26 @@ class QNetContext:
     def optimize(self, replay_memory, batch_size):
         batch = replay_memory.structured_sample(batch_size) # get samples from the replay memory
         sum_loss = 0.0
-        loss_counter = 0
         for b in batch:
             state_history = b[0]
             reward = b[1]
             state_next, action_next = state_history[0]
             sum_loss += self.backpropagate(state_next, action_next, reward)
-            loss_counter += 1
 
             for state, action_next in list(state_history)[1:]:
                 with torch.no_grad():
                     next_q_values = self.get_q_values(state_next, self.target_net)
                     q_value_max = torch.max(next_q_values).item()
                 sum_loss += self.backpropagate(state, action_next, q_value_max * GAMMA)
-                loss_counter += 1
                 state_next = state
 
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
-        return sum_loss / loss_counter
+        return sum_loss
 
     def backpropagate(self, state, action, reward):
         self.optimizer.zero_grad()
-        output = self.policy_net(board_to_tensor(board_to_tri_state(state)))
+        output = self.policy_net(board_to_tensor(state))
 
         target = output.clone().detach()
         target[action] = reward
@@ -112,27 +109,13 @@ class QNetContext:
         return loss.item()
 
     def get_q_values(self, state, model):
-        inputs = board_to_tensor(board_to_tri_state(state))
+        inputs = board_to_tensor(state)
         outputs = model(inputs)
         return outputs
 
 
 def board_to_tensor(state):
     return torch.tensor(np.array([state.copy()]), device=device, dtype=float).flatten()
-
-
-def board_to_tri_state(state):
-    return state
-    '''
-    result = np.array([state.copy(),state.copy(),state.copy()])
-    result[0][result[0] != 1] = 0
-    result[1][result[1] != 2] = 0
-    result[1][result[1] == 2] = 1
-    result[2][result[2] == 0] = 3
-    result[2][result[2] != 3] = 0
-    result[2][result[2] == 3] = 1
-    return result.flatten()
-    '''
 
 
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -187,7 +170,7 @@ def select_testing_action(mask, agent, model):
     else:
         if sum(mask) == 1:
             return mask.argmax()
-        output = model(board_to_tensor(board_to_tri_state(env.board.squares)))
+        output = model(board_to_tensor(env.board.squares))
         output[mask == 0] = min(torch.min(output), 0)
         return output.argmax().item()
 
@@ -200,7 +183,7 @@ if __name__ == "__main__":
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
-        f.write("#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\tbest-loss-history\n")
+        f.write("#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\n")
 
     games_training = {"draw": 0, "player_1": 0, "player_2": 0}
 
@@ -209,9 +192,8 @@ if __name__ == "__main__":
     replay_memory = ReplayMemory(max_length=MAX_MEMORY_SIZE)
 
     best_loss = float('inf')
-    best_loss_history = []
 
-    for episode_training in range(10001):
+    for episode_training in range(100001):
 
         env.reset()
         rounds = 0
@@ -232,7 +214,7 @@ if __name__ == "__main__":
             env.step(action)
             observation, reward, termination, truncation, info = env.last()
 
-            if len(replay_memory) >= BATCH_SIZE and agent == "player_1":
+            if len(replay_memory) >= BATCH_SIZE:
                 loss = q_net.optimize(replay_memory, BATCH_SIZE)
                 if loss < best_loss:
                     best_loss = loss
@@ -248,7 +230,6 @@ if __name__ == "__main__":
         games_training[winner_name] += 1
 
         if episode_training % 100 == 0 and episode_training != 0:
-            best_loss_history.append(best_loss)
             print(f"episode: {episode_training} - best-loss: {best_loss}")
 
         if episode_training % 1000 == 0 and episode_training != 0:
@@ -295,9 +276,7 @@ if __name__ == "__main__":
             print(f"player-2:  {games_training['player_2']:8}\t{games_test['player_2']:8}")
 
             with open(file_name, 'a') as f:
-                f.write(f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{best_loss}\t{best_loss_history}\n")
-
-            best_loss_history.clear()
+                f.write(f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{best_loss}\n")
 
     torch.save(q_net.target_net.state_dict(), "tic-tac-toe.pth")
 
