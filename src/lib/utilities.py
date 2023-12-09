@@ -538,7 +538,7 @@ def fen_to_bitboard(fen):
             i = symbol.upper() if color else symbol
             piece_bitboards[i] = v
 
-    fen_to_bitboard()  # empty bitboard
+    # empty bitboard
     piece_bitboards['-'] = board.occupied ^ 2 ** 64 - 1
 
     # player bitboard (full 1s if player is white, full 0s otherwise)
@@ -574,6 +574,8 @@ def main():
     print(tensor)
     tensor = fen_to_tensor_non_hot_enc_1dim("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     print(tensor)
+    tensor = fen_to_bitboard("r1bqnrk1/2p2pbp/p1n1p1p1/1p1pP2P/3P1P2/3BBN2/PPP1N1P1/R2QK2R w")
+    print(tensor.shape)
 
 
 if __name__ == "__main__":

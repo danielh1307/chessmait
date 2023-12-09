@@ -60,7 +60,7 @@ def get_reward(env, agent):
     if winner and agent == "player_1":
         return 1.0, agent
     elif winner and agent == "player_2":
-        return -1.0, agent
+        return 0.0, agent
     else:
         return 0, "draw"
 
