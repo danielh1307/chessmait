@@ -41,10 +41,10 @@ model = ChessmaitMlp5()
 NORMALIZATION_USED = False
 MAX_EVALUATION = 15265
 MIN_EVALUATION = -15265
-CLIPPING_USED = True
+CLIPPING_USED = False
 MAX_CLIPPING = 1000
 MIN_CLIPPING = -1000
-MODEL_NAME = "lemon-plasma-103"
+MODEL_NAME = "apricot-armadillo-167"
 
 CLASSES = {
     ">4": {
@@ -142,12 +142,13 @@ def evaluate_fen_file(fen_file, device):
     if NORMALIZATION_USED:
         print(f"Un-normalizing the results ...")
         df['Evaluation_Predicted'] = df['Evaluation_Predicted_Original'].apply(reverse_normalization)
-
-    if CLIPPING_USED:
+    elif CLIPPING_USED:
         # we "clip" both the true values and the predicted values
         df = remove_mates(df, 'Evaluation')
         df["Evaluation"] = df["Evaluation"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
         df["Evaluation_Predicted"] = df["Evaluation_Predicted_Original"].clip(lower=MIN_CLIPPING, upper=MAX_CLIPPING)
+    else:
+        df['Evaluation_Predicted'] = df['Evaluation_Predicted_Original']
 
     output_file_name = f"{fen_file[0:-4]}_evaluated_{MODEL_NAME}.csv"
     print(f"Finished, saving the result to {output_file_name} ...")
