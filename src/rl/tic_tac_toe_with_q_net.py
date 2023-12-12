@@ -43,35 +43,28 @@ class QNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2)
         )
-        '''
-        self.layer3 = nn.Sequential(
-            nn.Linear(OUT_FEATURES, OUT_FEATURES),
-            nn.ReLU(),
-            nn.Dropout(0.2)
-        )
-        '''
         self.output_layer = nn.Sequential(
-            nn.Linear(OUT_FEATURES, BOARD_SIZE)
+            nn.Linear(OUT_FEATURES, BOARD_SIZE),
+            nn.Sigmoid()
         )
         self.double()
 
     def forward(self, x):
         x = self.layer1(x)
         x = self.layer2(x)
-        #x = self.layer3(x)
         return self.output_layer(x)
 
 
 class QNetContext:
     def __init__(self):
         self.policy_net = QNet().to(device)
-        self.policy_net = self.policy_net.train()
+        self.policy_net = self.policy_net
         self.target_net = QNet().to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net = self.target_net.eval()
 
-        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=1e-4, amsgrad=True)
-        self.loss_function = nn.SmoothL1Loss()
+        self.optimizer = optim.SGD(self.policy_net.parameters(), lr=1e-4)
+        self.loss_function = nn.MSELoss()
 
     def optimize(self, replay_memory, batch_size):
         batch = replay_memory.structured_sample(batch_size) # get samples from the replay memory
@@ -214,17 +207,17 @@ if __name__ == "__main__":
             env.step(action)
             observation, reward, termination, truncation, info = env.last()
 
-            if len(replay_memory) >= BATCH_SIZE:
-                loss = q_net.optimize(replay_memory, BATCH_SIZE)
-                if loss < best_loss:
-                    best_loss = loss
-                    q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
-
             rounds += 1
 
         reward, winner_name = get_reward(env, agent)
         memory = Memory(state_table.copy(), reward)
         replay_memory.store(memory)
+
+        if len(replay_memory) >= BATCH_SIZE:
+            loss = q_net.optimize(replay_memory, BATCH_SIZE)
+            if loss < best_loss:
+                best_loss = loss
+                q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
 
         eps = max(MIN_EPS, eps * EPS_DECAY)
         games_training[winner_name] += 1
@@ -239,10 +232,10 @@ if __name__ == "__main__":
 
             games_test = {"draw": 0, "player_1": 0, "player_2": 0}
 
-            for episode_test in range(1000):
+            model = copy.deepcopy(q_net.target_net)
+            model.eval()
 
-                model = copy.deepcopy(q_net.target_net)
-                model.eval()
+            for episode_test in range(1000):
 
                 env.reset()
                 cache = np.zeros((9, 9))
