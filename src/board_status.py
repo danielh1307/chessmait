@@ -36,6 +36,8 @@ class BoardStatus:
 
     def print(self, new_board):
         new_board = self.convert_to_int(new_board)
+        print("a b c d e f g h")
+        print("-----------------")
         for row in range(8):
             for col in range(8):
                 if new_board[row][col] != self.old_board[row][col]:
@@ -44,7 +46,7 @@ class BoardStatus:
                     print(f"{BoardStatus.COLOR_EMPTY_FIELDS}{BoardStatus.int_to_str_mapping[new_board[row][col]]}{BoardStatus.COLOR_DEFAULT} ", end='')
                 else:
                     print(f"{BoardStatus.int_to_str_mapping[new_board[row][col]]} ", end='')
-            print("")
+            print(str(8-row))
 
 
     @staticmethod
