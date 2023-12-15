@@ -1,11 +1,11 @@
 import random
 
 import chess
-from lib.position_validator import get_valid_positions
+from src.lib.position_validator import get_valid_positions
 from src.lib.utilities import fen_to_tensor_one_board
 from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc
 import src.board_status as bs
-import trained_model as tm
+import src.trained_model as tm
 import torch as tc
 
 
