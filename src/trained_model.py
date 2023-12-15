@@ -4,6 +4,7 @@ from src.model.ChessmaitMlp1 import ChessmaitMlp1
 from src.model.ChessmaitMlp4 import ChessmaitMlp4
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 from src.model.ChessmaitCnn2NonHot import ChessmaitCnn2NonHot
+from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 from src.lib.utilities import get_device
 
 PATH_TO_MODEL = os.path.join("models")
@@ -23,6 +24,8 @@ class TrainedModel:
             self.model = ChessmaitMlp4()
         elif version == 4:
             self.model = ChessmaitCnn2NonHot()
+        elif version == 5:
+            self.model = ChessmaitCnn4Bitboard()
         else:
             self.model = ChessmaitMlp1()
         self.model.load_state_dict(torch.load(os.path.join(PATH_TO_MODEL, self.file_name), map_location=device))
@@ -43,3 +46,7 @@ model_divine_leaf_29 = TrainedModel("divine-leaf-29.pth", 12352, -12349, 3, 0, d
 model_honest_dragon_72 = TrainedModel("honest-dragon-72.pth", 15265, -15265, 4, 1, device)
 model_upbeat_cloud_79 = TrainedModel("upbeat-cloud-79.pth", 1000, -1000, 2, 0, device, use_normalization=False)
 model_lemon_plasma_103 = TrainedModel("lemon-plasma-103.pth", 1000, -1000, 2, 0, device, use_normalization=False)
+model_graceful_glitter_166 = TrainedModel("graceful-glitter-166.pth", 1000, -1000, 2, 0, device, use_normalization=False)
+model_effortless_vortex_142 = TrainedModel("effortless-vortex-142.pth", 1000, -1000, 5, 2, device, use_normalization=False)
+model_apricot_armadillo_167 = TrainedModel("apricot-armadillo-167.pth", 1000, -1000, 2, 0, device, use_normalization=False)
+
