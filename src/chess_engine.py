@@ -1,12 +1,13 @@
 import random
 
 import chess
-from src.lib.position_validator import get_valid_positions
-from src.lib.utilities import fen_to_tensor_one_board
-from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc
+import torch as tc
+
 import src.board_status as bs
 import src.trained_model as tm
-import torch as tc
+from src.lib.position_validator import get_valid_positions
+from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc
+from src.lib.utilities import fen_to_tensor_one_board, is_checkmate
 
 
 def get_valid_moves_with_evaluation(current_position, trained_model):
@@ -33,6 +34,10 @@ def get_best_move(current_position, model, is_white):
     valid_moves_with_evaluation = get_valid_moves_with_evaluation(current_position, model)
     min_max_eval_key = next(iter(valid_moves_with_evaluation))
     for k in valid_moves_with_evaluation.keys():
+        for valid_position in valid_moves_with_evaluation[k]:
+            if is_checkmate(valid_position):
+                # if there is a mate within our moves, we return it
+                return k, valid_position
         if (is_white and k > min_max_eval_key) or (not is_white and k < min_max_eval_key):
             min_max_eval_key = k
     index = 0 if len(valid_moves_with_evaluation[min_max_eval_key]) == 1 else random.randrange(

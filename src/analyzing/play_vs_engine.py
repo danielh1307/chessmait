@@ -4,7 +4,7 @@ import chess
 import torch
 
 from src.lib.utilities import fen_to_tensor_one_board
-from src.lib.utilities import get_device
+from src.lib.utilities import get_device, is_checkmate
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # This script allows you to play vs. one of our models.
@@ -17,7 +17,7 @@ model.eval()
 NORMALIZATION_USED = False
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
-CHESSMAIT_PLAYS_WHITE = True
+CHESSMAIT_PLAYS_WHITE = False
 
 
 def reverse_normalisiation(normalized_evaluation):
@@ -45,6 +45,10 @@ def get_next_move_model(board, device):
     for possible_next_move in list(board.legal_moves):
         board_copy = board.copy()
         board_copy.push_uci(possible_next_move.uci())
+        if is_checkmate(board_copy.fen()):
+            # a checkmate is always the best move
+            return possible_next_move
+
         next_move_evaluation = reverse_normalisiation(evaluate_board(board_copy, device).item())
         all_possible_moves.append((possible_next_move, next_move_evaluation))
 
