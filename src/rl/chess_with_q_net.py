@@ -1,7 +1,6 @@
 # inspired by https://nestedsoftware.com/2019/12/27/tic-tac-toe-with-a-neural-network-1fjn.206436.html
 # and https://medium.com/towards-data-science/hands-on-deep-q-learning-9073040ce841
 
-import copy
 import os
 import numpy as np
 import time
@@ -19,7 +18,7 @@ PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.
 EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
 MIN_EPS = 0.1 # ...until this minimum eps is reached
 GAMMA = 0.95 # discount
-MAX_MEMORY_SIZE = 10000 # size of the replay memory
+MAX_MEMORY_SIZE = 100 # size of the replay memory
 BATCH_SIZE = 32 # batch size of the neural network training
 
 POSSIBLE_INDEXES = np.arange(9)
@@ -84,15 +83,15 @@ class QNetContext:
         for index, (observation, action, reward, new_observation, done) in enumerate(mini_batch):
             if not done:
                 # If not terminal, include the next state
-                max_future_q = reward + GAMMA * torch.max(target_qs[index])
+                max_future_q = reward + GAMMA * torch.max(target_qs[index]).item()
             else:
                 # If terminal, only include the immediate reward
                 max_future_q = reward
 
             # The Qs for this sample of the mini batch
-            updated_qs_sample = initial_qs[index]
+            updated_qs_sample = initial_qs[index].clone().detach()
             # Update the value for the taken action
-            action_to = action[1][0].item()
+            action_to = action[0].item()
             updated_qs_sample[action_to] = max_future_q
 
             # Keep track of the observation and updated Q value
@@ -160,6 +159,10 @@ WHITE_ROOK = 4
 WHITE_QUEEN = 5
 WHITE_KING = 6
 BLACK_KING = 20
+NO_PROMOTION = 0
+NO_REWARD = 0
+WIN_REWARD = 1
+LOST_REWARD = -1
 
 
 def evaluate_moves(before, after):
@@ -168,69 +171,69 @@ def evaluate_moves(before, after):
     after -= before
     if -BLACK_KING in after: # black king moved
         if BLACK_KING in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING), 0
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_PAWN in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_PAWN), 0 # black king has taken the white pawn
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_PAWN), NO_PROMOTION, LOST_REWARD # black king has taken the white pawn
         if BLACK_KING - WHITE_KING in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KING), 0 # black king has taken the white king
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KING), NO_PROMOTION, LOST_REWARD # black king has taken the white king
         if BLACK_KING - WHITE_QUEEN in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_QUEEN), 0 # black king has taken the white queen
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_QUEEN), NO_PROMOTION, LOST_REWARD # black king has taken the white queen
         if BLACK_KING - WHITE_ROOK in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_ROOK), 0 # black king has taken the white rook
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_ROOK), NO_PROMOTION, LOST_REWARD # black king has taken the white rook
         if BLACK_KING - WHITE_BISHOP in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_BISHOP), 0 # black king has taken the white bishop
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_BISHOP), NO_PROMOTION, LOST_REWARD # black king has taken the white bishop
         if BLACK_KING - WHITE_KNIGHT in after:
-            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KNIGHT), 0 # black king has taken the white bishop
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KNIGHT), NO_PROMOTION, LOST_REWARD # black king has taken the white bishop
         else:
             raise Exception("no valid move evaluated for black king")
     elif -WHITE_KING in after:  # white king moved
         if WHITE_KING in after:
-            return np.where(after == -WHITE_KING), np.where(after == WHITE_KING), 0
+            return np.where(after == -WHITE_KING), np.where(after == WHITE_KING), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_KING in after:
-            return np.where(after == -WHITE_KING), np.where(after == BLACK_KING - WHITE_KING), 0 # white king has taken the black king
+            return np.where(after == -WHITE_KING), np.where(after == BLACK_KING - WHITE_KING), NO_PROMOTION, WIN_REWARD # white king has taken the black king
         else:
             raise Exception("no valid move evaluated for white king")
     elif -WHITE_PAWN in after: # white pawn moved
         if WHITE_PAWN in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_PAWN), 0
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_PAWN), NO_PROMOTION, NO_REWARD
         elif WHITE_KNIGHT in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_KNIGHT), WHITE_KNIGHT # convert pawn to knight
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_KNIGHT), WHITE_KNIGHT,  WIN_REWARD# convert pawn to knight
         elif WHITE_BISHOP in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_BISHOP), WHITE_BISHOP # convert pawn to bishop
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_BISHOP), WHITE_BISHOP, WIN_REWARD # convert pawn to bishop
         elif WHITE_ROOK in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_ROOK), WHITE_ROOK # convert pawn to rook
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_ROOK), WHITE_ROOK, WIN_REWARD # convert pawn to rook
         elif WHITE_QUEEN in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_QUEEN), WHITE_QUEEN # convert pawn to queen
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_QUEEN), WHITE_QUEEN, WIN_REWARD # convert pawn to queen
         elif BLACK_KING - WHITE_PAWN in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == BLACK_KING - WHITE_PAWN), 5 # white pawn has taken the black king
+            return np.where(after == -WHITE_PAWN), np.where(after == BLACK_KING - WHITE_PAWN), NO_PROMOTION, WIN_REWARD # white pawn has taken the black king
         else:
             raise Exception("no valid move evaluated for pawn")
     elif -WHITE_QUEEN in after: # white queen moved
         if -WHITE_QUEEN in after:
-            return np.where(after == -WHITE_QUEEN), np.where(after == WHITE_QUEEN), 0
+            return np.where(after == -WHITE_QUEEN), np.where(after == WHITE_QUEEN), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_QUEEN in after:
-            return np.where(after == -WHITE_QUEEN), np.where(after == BLACK_KING - WHITE_QUEEN), 0
+            return np.where(after == -WHITE_QUEEN), np.where(after == BLACK_KING - WHITE_QUEEN), NO_PROMOTION, WIN_REWARD # white queen has taken the black king
         else:
             raise Exception("no valid move evaluated for queen")
     elif -WHITE_ROOK in after: # white rook moved
         if -WHITE_ROOK in after:
-            return np.where(after == -WHITE_ROOK), np.where(after == WHITE_ROOK), 0
+            return np.where(after == -WHITE_ROOK), np.where(after == WHITE_ROOK), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_ROOK in after:
-            return np.where(after == -WHITE_ROOK), np.where(after == BLACK_KING - WHITE_ROOK), 0
+            return np.where(after == -WHITE_ROOK), np.where(after == BLACK_KING - WHITE_ROOK), NO_PROMOTION, WIN_REWARD # white rook has taken the black king
         else:
             raise Exception("no valid move evaluated for rook")
     elif -WHITE_BISHOP in after: # white bishop moved
         if -WHITE_BISHOP in after:
-            return np.where(after == -WHITE_BISHOP), np.where(after == WHITE_BISHOP), 0
+            return np.where(after == -WHITE_BISHOP), np.where(after == WHITE_BISHOP), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_BISHOP in after:
-            return np.where(after == -WHITE_BISHOP), np.where(after == BLACK_KING - WHITE_BISHOP), 0
+            return np.where(after == -WHITE_BISHOP), np.where(after == BLACK_KING - WHITE_BISHOP), NO_PROMOTION, WIN_REWARD # white bishop has taken the black king
         else:
             raise Exception("no valid move evaluated for bishop")
     elif -WHITE_KNIGHT in after: # white knight moved
         if -WHITE_KNIGHT in after:
-            return np.where(after == -WHITE_KNIGHT), np.where(after == WHITE_KNIGHT), 0
+            return np.where(after == -WHITE_KNIGHT), np.where(after == WHITE_KNIGHT), NO_PROMOTION, NO_REWARD
         if BLACK_KING - WHITE_KNIGHT in after:
-            return np.where(after == -WHITE_KNIGHT), np.where(after == BLACK_KING - WHITE_KNIGHT), 0
+            return np.where(after == -WHITE_KNIGHT), np.where(after == BLACK_KING - WHITE_KNIGHT), NO_PROMOTION, WIN_REWARD # white knight has taken the black king
         else:
             raise Exception("no valid move evaluated for knight")
     else:
@@ -250,38 +253,39 @@ def select_action(is_white, is_training, model):
         move_list = []
         for legal_move in legal_moves_fen:
             after = board_to_array(chess.Board(legal_move))
-            move_from, move_to, conversion = evaluate_moves(before, after)
-            move_list.append((move_from, move_to, conversion))
+            move_from, move_to, promotion, reward = evaluate_moves(before, after)
+            move_list.append((move_from, move_to, promotion, reward))
             legal_moves_index[move_to[0]] = 1
         output[legal_moves_index != 1] = 0
         move_to = output.argmax().item()
         for move in move_list:
             if move[1][0].item() == move_to:
-                return move[0], move[1], move[2]
+                return move[0], move[1], move[2], move[3]
         raise Exception("no valid move found")
 
 
 promotion_labels = ['','','n','b','r','q']
 
 
-def get_actions(action):
-    a_from = action[0][0].item()
-    a_to = action[1][0].item()
-    promotion_index = action[2]
+def get_actions(action_from, action_to, promotion_index):
+    action_from = action_from[0].item()
+    action_to = action_to[0].item()
     if promotion_index != 0:
         promotion = promotion_labels[promotion_index]
     else:
         promotion = ''
-    action_from = letters[a_from % 8] + str(8 - a_from // 8)
-    action_to = letters[a_to % 8] + str(8 - a_to // 8)
+    action_from = letters[action_from % 8] + str(8 - action_from // 8)
+    action_to = letters[action_to % 8] + str(8 - action_to // 8)
     return action_from, action_to + promotion
 
 
 def play_and_print(color, action_from, action_to):
-    print(f"--------------- round: {rounds} {color} - san: '{action_from}{action_to}'")
-    board_status.cache(board)
+    if SHOW_BOARD:
+        print(f"--------------- round: {rounds} {color} - san: '{action_from}{action_to}'")
+        board_status.cache(board)
     play(action_from, action_to)
-    board_status.print(board)
+    if SHOW_BOARD:
+        board_status.print(board)
 
 
 def play(action_from, action_to):
@@ -291,6 +295,7 @@ def play(action_from, action_to):
 
 letters = ['a','b','c','d','e','f','g','h']
 
+SHOW_BOARD = False
 
 if __name__ == "__main__":
 
@@ -318,35 +323,46 @@ if __name__ == "__main__":
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
         rounds = 0
         winner_name = "draw"
-        reward = 0.0
+        global_reward = 0.0
 
         while not board.is_game_over() and rounds < 50:
-            reward -= rounds * 0.001
-            action = select_action(True, True, q_net.policy_net)
-            action_from, action_to = get_actions(action)
+            global_reward -= rounds * 0.0001
+            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, True, q_net.policy_net)
+            action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
             state_table_before = board_to_array(board)
-            play_and_print("white", action_from, action_to)
+            play_and_print("white", action_from_str, action_to_str)
+            state_table_after = board_to_array(board)
 
             if board.is_game_over():
-                reward = 1.0 if board.is_checkmate() or action[2] > 0 else reward
-                print(f"reward: {reward}, promotion: {action[2]}")
-                state_table_after = board_to_array(board)
-                replay_memory.store([state_table_before, action, reward, state_table_after, True])
+                if reward_after_white_move == NO_REWARD:
+                    reward = global_reward
+                else:
+                    reward = reward_after_white_move
+                if SHOW_BOARD:
+                    print(f"reward: {reward}, promotion: {promotion}")
+                replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
                 winner_name = "white"
             else:
-                reward = 1.0 if action[2] > 0 else reward
-                action = select_action(False, True, q_net.policy_net)
-                action_from, action_to = get_actions(action)
-                play_and_print("black", action_from, action_to)
-                state_table_after = board_to_array(board)
+                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, True, q_net.policy_net)
+                action_from_str, action_to_str = get_actions(action_from_black, action_to_black, promotion)
+                play_and_print("black", action_from_str, action_to_str)
                 if board.is_game_over():
-                    reward = -1.0 if board.is_checkmate() else reward
-                    print(f"reward: {reward}, promotion: {action[2]}")
-                    replay_memory.store([state_table_before, action, reward, state_table_after, True])
+                    if reward_after_black_move == NO_REWARD:
+                        reward = global_reward
+                    else:
+                        reward = reward_after_black_move
+                    if SHOW_BOARD:
+                        print(f"reward: {reward}")
+                    replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
                     winner_name = "black"
                 else:
-                    print(f"reward: {reward}, promotion: {action[2]}")
-                    replay_memory.store([state_table_before, action, reward, state_table_after, False])
+                    if reward_after_white_move == NO_REWARD and reward_after_black_move == NO_REWARD:
+                        reward = global_reward
+                    else:
+                        reward = reward_after_white_move
+                    if SHOW_BOARD:
+                        print(f"reward: {reward}, promotion: {promotion}")
+                    replay_memory.store([state_table_before, action_to_white, reward, state_table_after, False])
 
             rounds += 1
             steps_since_model_update += 1
@@ -364,6 +380,7 @@ if __name__ == "__main__":
         if episode_training % 10 == 0 and episode_training != 0:
             print(f"episode: {episode_training} - best-loss: {best_loss}")
 
+        '''
         if episode_training % 100 == 0 and episode_training != 0:
 
             print("-----------------------------")
@@ -405,7 +422,7 @@ if __name__ == "__main__":
 
             with open(file_name, 'a') as f:
                 f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t1000\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\n")
-
+        '''
     torch.save(q_net.target_net.state_dict(), "chess.pth")
 
     print("-----------------------------")
