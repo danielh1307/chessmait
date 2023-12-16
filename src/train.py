@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader, random_split
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
-from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 from src.lib.utilities import get_device
+from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 
 
 ############################################################
@@ -41,6 +41,7 @@ def get_training_configuration() -> argparse.Namespace:
     # _config.momentum = 0.7
     # _config.weight_decay = 1e-8
 
+    _config.num_workers = 20
     _config.epochs = 50
     _config.batch_size = 64
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
@@ -57,8 +58,10 @@ PATH_TO_PICKLEFILE = os.path.join("data", "angelo")
 # set either PICKLE_FILES or DATA_FILES
 # PICKLE_FILES: contains already the correct tensors
 # DATA_FILES: contains FEN position, tensors have to be created
-PICKLE_FILES = ["01_with_mate.pkl", "02_with_mate.pkl", "03_with_mate.pkl", "04_with_mate.pkl", "06_with_mate.pkl",
-                "07_with_mate.pkl", "08_with_mate.pkl", "09_with_mate.pkl", "10_with_mate.pkl"]
+PICKLE_FILES = ["01_with_mate_bitboard.pkl", "02_with_mate_bitboard.pkl", "03_with_mate_bitboard.pkl",
+                "04_with_mate_bitboard.pkl", "06_with_mate_bitboard.pkl",
+                "07_with_mate_bitboard.pkl", "08_with_mate_bitboard.pkl", "09_with_mate_bitboard.pkl",
+                "10_with_mate_bitboard.pkl"]
 DATA_FILES = []
 
 WANDB_REPORTING = True
@@ -115,8 +118,9 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     print(f"Number of training games is {_config.number_of_evaluations_for_training}")
 
     # Create DataLoaders
-    _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True, num_workers=20)
-    _val_loader = DataLoader(val_dataset, batch_size=_config.batch_size, shuffle=False, num_workers=20)
+    _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True,
+                               num_workers=_config.num_workers)
+    _val_loader = DataLoader(val_dataset, batch_size=_config.batch_size, shuffle=False, num_workers=_config.num_workers)
 
     print("Prepare dataloaders finished ...")
     return _train_loader, _val_loader
