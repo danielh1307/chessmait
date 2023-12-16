@@ -72,14 +72,14 @@ class QNetContext:
 
         # Get the Q values for the initial states of the trajectories from the model
         initial_states = np.array([batch[0] for batch in mini_batch])
-        initial_qs = self.policy_net(board_to_tensor(initial_states))
+        initial_qs = self.policy_net(torch.tensor(initial_states, device=device, dtype=torch.double))
 
         # Get the "target" Q values for the next states
         next_states = np.array([batch[3] for batch in mini_batch])
-        target_qs = self.target_net(torch.tensor(next_states))
+        target_qs = self.target_net(torch.tensor(next_states, device=device, dtype=torch.double))
 
-        states = []
-        updated_qs = []
+        states = np.empty([len(mini_batch), BOARD_SIZE])
+        updated_qs = torch.empty((len(mini_batch), BOARD_SIZE), device=device, dtype=torch.double)
 
         for index, (observation, action, reward, new_observation, done) in enumerate(mini_batch):
             if not done:
@@ -92,13 +92,14 @@ class QNetContext:
             # The Qs for this sample of the mini batch
             updated_qs_sample = initial_qs[index]
             # Update the value for the taken action
-            updated_qs_sample[action] = max_future_q
+            action_to = action[1][0].item()
+            updated_qs_sample[action_to] = max_future_q
 
             # Keep track of the observation and updated Q value
-            states.append(torch.tensor(observation))
-            updated_qs.append(updated_qs_sample)
+            states[index] = observation
+            updated_qs[index] = updated_qs_sample
 
-        predicted_qs = self.policy_net(states)
+        predicted_qs = self.policy_net(torch.tensor(states, device=device, dtype=torch.double))
         loss = self.loss_function(predicted_qs, updated_qs)
 
         self.optimizer.zero_grad()
@@ -107,20 +108,28 @@ class QNetContext:
 
         return loss
 
+    def get_q_values(self, state, model):
+        inputs = board_to_tensor_with_board(state)
+        outputs = model(inputs)
+        return outputs
 
-def board_to_tensor(this_board):
+
+def board_to_tensor_with_state(this_state):
+    return torch.tensor(this_state, device=device, dtype=float).flatten()
+
+def board_to_tensor_with_board(this_board):
     int_board = board_status.convert_to_int(this_board)
-    return torch.tensor(np.array([int_board]), device=device, dtype=float).flatten()
+    return torch.tensor(np.array(int_board), device=device, dtype=float).flatten()
 
 
 def board_to_array(this_board):
-    return board_status.convert_to_int(this_board)
+    return np.array(board_status.convert_to_int(this_board)).flatten()
 
 
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 q_net = QNetContext()
-env = chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE)
-env.configure({"UCI_Elo": 1320})
+#env = chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE)
+#env.configure({"UCI_Elo": 1320})
 board = chess.Board()
 board_status = BoardStatus()
 eps = 0.3 # exploration rate, probability of choosing random action
@@ -144,28 +153,88 @@ class ReplayMemory:
         return len(self.memory)
 
 
+WHITE_PAWN = 1
+WHITE_KNIGHT = 2
+WHITE_BISHOP = 3
+WHITE_ROOK = 4
+WHITE_QUEEN = 5
+WHITE_KING = 6
+BLACK_KING = 20
+
+
 def evaluate_moves(before, after):
-    before[before == -6] = 10
-    after[after == -6] = 10
+    before[before == -6] = BLACK_KING
+    after[after == -6] = BLACK_KING
     after -= before
-    if -10 in after: # black king moved
-        return before.index(10), after.index(-10), False
-    elif -6 in after:  # white king moved
-        return before.index(6), after.index(-6), False
-    elif -1 in after: # white pawn moved
-        if after.index(-1) < 8:
-            return before.index(1), after.index(-1), True # convert the pawn
-        return before.index(1), after.index(-1), False
-    elif -9 in after: # black king has taken the white pawn
-        return before.index(10), after.index(-9), False
-    elif -4 in after: # black king has taken the white king
-        return before.index(10), after.index(-4), False
-    elif 4 in after: # white king has taken the black king
-        return before.index(6), after.index(4), False
-    elif 9 in after: # white pawn has taken the black king
-        return before.index(1), after.index(9), False
+    if -BLACK_KING in after: # black king moved
+        if BLACK_KING in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING), 0
+        if BLACK_KING - WHITE_PAWN in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_PAWN), 0 # black king has taken the white pawn
+        if BLACK_KING - WHITE_KING in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KING), 0 # black king has taken the white king
+        if BLACK_KING - WHITE_QUEEN in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_QUEEN), 0 # black king has taken the white queen
+        if BLACK_KING - WHITE_ROOK in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_ROOK), 0 # black king has taken the white rook
+        if BLACK_KING - WHITE_BISHOP in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_BISHOP), 0 # black king has taken the white bishop
+        if BLACK_KING - WHITE_KNIGHT in after:
+            return np.where(after == -BLACK_KING), np.where(after == BLACK_KING - WHITE_KNIGHT), 0 # black king has taken the white bishop
+        else:
+            raise Exception("no valid move evaluated for black king")
+    elif -WHITE_KING in after:  # white king moved
+        if WHITE_KING in after:
+            return np.where(after == -WHITE_KING), np.where(after == WHITE_KING), 0
+        if BLACK_KING - WHITE_KING in after:
+            return np.where(after == -WHITE_KING), np.where(after == BLACK_KING - WHITE_KING), 0 # white king has taken the black king
+        else:
+            raise Exception("no valid move evaluated for white king")
+    elif -WHITE_PAWN in after: # white pawn moved
+        if WHITE_PAWN in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_PAWN), 0
+        elif WHITE_KNIGHT in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_KNIGHT), WHITE_KNIGHT # convert pawn to knight
+        elif WHITE_BISHOP in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_BISHOP), WHITE_BISHOP # convert pawn to bishop
+        elif WHITE_ROOK in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_ROOK), WHITE_ROOK # convert pawn to rook
+        elif WHITE_QUEEN in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_QUEEN), WHITE_QUEEN # convert pawn to queen
+        elif BLACK_KING - WHITE_PAWN in after:
+            return np.where(after == -WHITE_PAWN), np.where(after == BLACK_KING - WHITE_PAWN), 5 # white pawn has taken the black king
+        else:
+            raise Exception("no valid move evaluated for pawn")
+    elif -WHITE_QUEEN in after: # white queen moved
+        if -WHITE_QUEEN in after:
+            return np.where(after == -WHITE_QUEEN), np.where(after == WHITE_QUEEN), 0
+        if BLACK_KING - WHITE_QUEEN in after:
+            return np.where(after == -WHITE_QUEEN), np.where(after == BLACK_KING - WHITE_QUEEN), 0
+        else:
+            raise Exception("no valid move evaluated for queen")
+    elif -WHITE_ROOK in after: # white rook moved
+        if -WHITE_ROOK in after:
+            return np.where(after == -WHITE_ROOK), np.where(after == WHITE_ROOK), 0
+        if BLACK_KING - WHITE_ROOK in after:
+            return np.where(after == -WHITE_ROOK), np.where(after == BLACK_KING - WHITE_ROOK), 0
+        else:
+            raise Exception("no valid move evaluated for rook")
+    elif -WHITE_BISHOP in after: # white bishop moved
+        if -WHITE_BISHOP in after:
+            return np.where(after == -WHITE_BISHOP), np.where(after == WHITE_BISHOP), 0
+        if BLACK_KING - WHITE_BISHOP in after:
+            return np.where(after == -WHITE_BISHOP), np.where(after == BLACK_KING - WHITE_BISHOP), 0
+        else:
+            raise Exception("no valid move evaluated for bishop")
+    elif -WHITE_KNIGHT in after: # white knight moved
+        if -WHITE_KNIGHT in after:
+            return np.where(after == -WHITE_KNIGHT), np.where(after == WHITE_KNIGHT), 0
+        if BLACK_KING - WHITE_KNIGHT in after:
+            return np.where(after == -WHITE_KNIGHT), np.where(after == BLACK_KING - WHITE_KNIGHT), 0
+        else:
+            raise Exception("no valid move evaluated for knight")
     else:
-        raise Exception("no valid move evaluated")
+        raise Exception("no valid move evaluated overall")
 
 
 def select_action(is_white, is_training, model):
@@ -176,26 +245,36 @@ def select_action(is_white, is_training, model):
         after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
     else:
-        output = q_net.get_q_values(board_to_tensor(board), q_net.policy_net)
+        output = q_net.get_q_values(board, q_net.policy_net)
         legal_moves_index = np.zeros(BOARD_SIZE)
         move_list = []
         for legal_move in legal_moves_fen:
             after = board_to_array(chess.Board(legal_move))
             move_from, move_to, conversion = evaluate_moves(before, after)
             move_list.append((move_from, move_to, conversion))
-            legal_moves_index[move_to] = 1
+            legal_moves_index[move_to[0]] = 1
         output[legal_moves_index != 1] = 0
         move_to = output.argmax().item()
         for move in move_list:
-            if move[1] == move_to:
+            if move[1][0].item() == move_to:
                 return move[0], move[1], move[2]
         raise Exception("no valid move found")
 
 
+promotion_labels = ['','','n','b','r','q']
+
+
 def get_actions(action):
-    action_from = letters[action[0].item() % 8] + str(8 - action[0].item() // 8)
-    action_to = letters[action[1].item() % 8] + str(8 - action[1].item() // 8)
-    return action_from, action_to
+    a_from = action[0][0].item()
+    a_to = action[1][0].item()
+    promotion_index = action[2]
+    if promotion_index != 0:
+        promotion = promotion_labels[promotion_index]
+    else:
+        promotion = ''
+    action_from = letters[a_from % 8] + str(8 - a_from // 8)
+    action_to = letters[a_to % 8] + str(8 - a_to // 8)
+    return action_from, action_to + promotion
 
 
 def play_and_print(color, action_from, action_to):
@@ -239,29 +318,34 @@ if __name__ == "__main__":
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
         rounds = 0
         winner_name = "draw"
+        reward = 0.0
 
         while not board.is_game_over() and rounds < 50:
+            reward -= rounds * 0.001
             action = select_action(True, True, q_net.policy_net)
             action_from, action_to = get_actions(action)
             state_table_before = board_to_array(board)
             play_and_print("white", action_from, action_to)
 
             if board.is_game_over():
-                reward = 1.0 if board.is_checkmate() else 0.0 - rounds * 0.01
+                reward = 1.0 if board.is_checkmate() or action[2] > 0 else reward
+                print(f"reward: {reward}, promotion: {action[2]}")
                 state_table_after = board_to_array(board)
                 replay_memory.store([state_table_before, action, reward, state_table_after, True])
                 winner_name = "white"
             else:
+                reward = 1.0 if action[2] > 0 else reward
                 action = select_action(False, True, q_net.policy_net)
                 action_from, action_to = get_actions(action)
                 play_and_print("black", action_from, action_to)
                 state_table_after = board_to_array(board)
                 if board.is_game_over():
-                    reward = -1.0 if board.is_checkmate() else 0.0 - rounds * 0.01
+                    reward = -1.0 if board.is_checkmate() else reward
+                    print(f"reward: {reward}, promotion: {action[2]}")
                     replay_memory.store([state_table_before, action, reward, state_table_after, True])
                     winner_name = "black"
                 else:
-                    reward = 0.0 - rounds * 0.01
+                    print(f"reward: {reward}, promotion: {action[2]}")
                     replay_memory.store([state_table_before, action, reward, state_table_after, False])
 
             rounds += 1
@@ -270,7 +354,7 @@ if __name__ == "__main__":
         if steps_since_model_update >= 10:
             loss = q_net.optimize(replay_memory, BATCH_SIZE)
             steps_since_model_update = 0
-            if loss < best_loss:
+            if loss is not None and loss < best_loss:
                 best_loss = loss
                 q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
 
@@ -324,12 +408,10 @@ if __name__ == "__main__":
 
     torch.save(q_net.target_net.state_dict(), "chess.pth")
 
-    env.close()
-
     print("-----------------------------")
     print("RL training end ***")
 
-    env.close()
+    #env.close()
     end = time.time()
     with open(file_name, 'a') as f:
         f.write(f"duration: {(end - start):0.1f}s\n")
