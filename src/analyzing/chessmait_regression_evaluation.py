@@ -10,7 +10,7 @@ import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
 
-from src.lib.analytics_utilities import evaluation_to_class, remove_mates
+from src.lib.analytics_utilities import evaluation_to_class, remove_mates, count_pieces
 from src.lib.utilities import fen_to_tensor_one_board, write_values_in_bars
 from src.lib.utilities import get_device
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
@@ -196,10 +196,6 @@ def smallest_and_highest_differences(fen_directory_evaluated):
     print(best_evaluations.to_string(index=False))
     print("\n\nWorst evaluations:")
     print(worse_evaluations.to_string(index=False))
-
-
-def count_pieces(fen):
-    return sum(1 for char in fen.split()[0] if char.isalpha())
 
 
 def create_statistics(fen_directory_evaluated):

@@ -40,5 +40,9 @@ def evaluation_to_class(CLASSES, evaluation):
 def remove_mates(df: pd.DataFrame, column):
     if df[column].dtype == 'object':
         df = df[~df[column].str.startswith('#')]
-        df.loc[:,column] = df[column].astype(int)
+        df.loc[:, column] = df[column].astype(int)
     return df
+
+
+def count_pieces(fen):
+    return sum(1 for char in fen.split()[0] if char.isalpha())

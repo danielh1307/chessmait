@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from src.lib.analytics_utilities import evaluation_to_class, remove_mates
+from src.lib.analytics_utilities import evaluation_to_class, remove_mates, count_pieces
 from src.lib.utilities import get_files_from_pattern, dataframe_from_files, write_values_in_bars
 
 # Helper script to analyze training data, mainly based on classification
@@ -90,16 +90,20 @@ def analyze_files_regression(file_pattern):
     print(f"I have loaded {len(df)} entries ...")
 
     df = remove_mates(df, "Evaluation")
+
     # add class labels
     df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(REGRESSION_CLASSES, x))
 
+    # add number of pieces
+    df["Num_Pieces"] = df["FEN"].apply(lambda x: count_pieces(x))
+
     # Create a figure with two subplots side by side
-    fig, axes = plt.subplots(1, 2, figsize=(20, 12))
+    fig, axes = plt.subplots(2, 2, figsize=(20, 12))
 
     ##########################################################################
     # Plot: show distribution of true classes (absolute)
     ##########################################################################
-    plot_axes = axes[0]
+    plot_axes = axes[0, 0]
     curr_plot = sns.countplot(x='Evaluated_Class', data=df, ax=plot_axes)
     plot_axes.set_title('Distribution of True Classes')
     plot_axes.set_xlabel('Class Label')
@@ -109,11 +113,32 @@ def analyze_files_regression(file_pattern):
     ##########################################################################
     # Plot: show distribution of true classes (percentage)
     ##########################################################################
-    plot_axes = axes[1]
+    plot_axes = axes[0, 1]
     percentage_values = (df['Evaluated_Class'].value_counts() / len(df)) * 100
     curr_plot = sns.barplot(x=percentage_values.index, y=percentage_values.values, ax=plot_axes)
     plot_axes.set_title('Distribution of True Classes (%)')
     plot_axes.set_xlabel('Class Label')
+    plot_axes.set_ylabel('Frequency')
+    write_values_in_bars(curr_plot)
+
+    ##########################################################################
+    # Plot: show distribution of number of pieces (absolute)
+    ##########################################################################
+    plot_axes = axes[1, 0]
+    curr_plot = sns.countplot(x='Num_Pieces', data=df, ax=plot_axes)
+    plot_axes.set_title('Distribution of number of pieces')
+    plot_axes.set_xlabel('Number of pieces')
+    plot_axes.set_ylabel('Frequency')
+    write_values_in_bars(curr_plot)
+
+    ##########################################################################
+    # Plot: show distribution of number of pieces (percentage)
+    ##########################################################################
+    plot_axes = axes[1, 1]
+    percentage_values = (df['Num_Pieces'].value_counts() / len(df)) * 100
+    curr_plot = sns.barplot(x=percentage_values.index, y=percentage_values.values, ax=plot_axes)
+    plot_axes.set_title('Distribution of number of pieces (%)')
+    plot_axes.set_xlabel('Number of pieces')
     plot_axes.set_ylabel('Frequency')
     write_values_in_bars(curr_plot)
 
