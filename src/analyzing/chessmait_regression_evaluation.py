@@ -198,6 +198,10 @@ def smallest_and_highest_differences(fen_directory_evaluated):
     print(worse_evaluations.to_string(index=False))
 
 
+def count_pieces(fen):
+    return sum(1 for char in fen.split()[0] if char.isalpha())
+
+
 def create_statistics(fen_directory_evaluated):
     df = get_concatenated_df_from_directory(fen_directory_evaluated)
 
@@ -207,8 +211,11 @@ def create_statistics(fen_directory_evaluated):
     df["Evaluated_Class"] = df["Evaluation"].apply(lambda x: evaluation_to_class(CLASSES, x))
     df["Evaluated_Class_Predicted"] = df["Evaluation_Predicted"].apply(lambda x: evaluation_to_class(CLASSES, x))
 
+    # add number of pieces
+    df["Num_Pieces"] = df["FEN"].apply(lambda x: count_pieces(x))
+
     # Create a figure with two subplots side by side
-    fig, axes = plt.subplots(9, 2, figsize=(36, 24))
+    fig, axes = plt.subplots(10, 2, figsize=(36, 24))
 
     ##########################################################################
     # Plot: show distribution of true classes (absolute)
@@ -259,7 +266,7 @@ def create_statistics(fen_directory_evaluated):
     mean_error = (df['Evaluation'] - df['Evaluation_Predicted']).abs().mean()
     rounded_mean_error = math.ceil(mean_error)
     class_avg_errors = df.groupby('Evaluated_Class')[['Evaluation', 'Evaluation_Predicted']].apply(
-        lambda x: (x['Evaluation'] - x['Evaluation_Predicted']).mean()).reset_index()
+        lambda x: (x['Evaluation'] - x['Evaluation_Predicted']).abs().mean()).reset_index()
 
     curr_plot = sns.barplot(x='Evaluated_Class', y=0, data=class_avg_errors, ax=plot_axes)
     plot_axes.set_title(f'Mean predicted error per class (overall: {rounded_mean_error})')
@@ -267,12 +274,25 @@ def create_statistics(fen_directory_evaluated):
     plot_axes.set_ylabel('Mean error')
     write_values_in_bars(curr_plot)
 
+    # ##########################################################################
+    # Plot: show mean error per number of pieces
+    # ##########################################################################
+    plot_axes = axes[2, 1]
+    piece_avg_errors = df.groupby('Num_Pieces')[['Evaluation', 'Evaluation_Predicted']].apply(
+        lambda x: (x['Evaluation'] - x['Evaluation_Predicted']).abs().mean()).reset_index()
+
+    curr_plot = sns.barplot(x='Num_Pieces', y=0, data=piece_avg_errors, ax=plot_axes)
+    plot_axes.set_title(f'Mean predicted error per piece number (overall: {rounded_mean_error})')
+    plot_axes.set_xlabel('No of pieces')
+    plot_axes.set_ylabel('Mean error')
+    write_values_in_bars(curr_plot)
+
     ##########################################################################
     # Plot: for each true label, show the predictions of the model
     ##########################################################################
     class_labels = list(CLASSES.keys())
-    curr_x = 2
-    curr_y = 1
+    curr_x = 3
+    curr_y = 0
     for class_label in class_labels:
         plot_axes = axes[curr_x, curr_y]
         curr_x = curr_x if curr_y == 0 else curr_x + 1
@@ -288,7 +308,7 @@ def create_statistics(fen_directory_evaluated):
     ##########################################################################
     # Plot: show a confusion matrix
     ##########################################################################
-    plot_axes = axes[7, 1]
+    plot_axes = axes[8, 0]
     cm = confusion_matrix(df["Evaluated_Class"], df["Evaluated_Class_Predicted"], labels=class_labels)
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, ax=plot_axes, xticklabels=class_labels,
                 yticklabels=class_labels)
@@ -309,7 +329,7 @@ def create_statistics(fen_directory_evaluated):
     # Extract the selected data points
     selected_data = df.iloc[random_indices]
 
-    scatter_axes = axes[8, 0]
+    scatter_axes = axes[8, 1]
     scatter_axes.scatter(selected_data["Evaluation_Predicted"], selected_data["Evaluation"], c='b',
                          label='Predicted vs. True', marker='o', s=20, alpha=0.5)
     scatter_axes.set_title("Predicted vs True Regression Values (just 0,1%)")
@@ -320,7 +340,7 @@ def create_statistics(fen_directory_evaluated):
     grouped = df.groupby('Evaluation')['Evaluation_Predicted'].mean().reset_index()
 
     # Create the line plot
-    plot_axes = axes[8, 1]
+    plot_axes = axes[9, 0]
     plot_axes.plot(grouped['Evaluation'], grouped['Evaluation_Predicted'])
     plot_axes.set_xlabel('True Values')
     plot_axes.set_ylabel('Mean Predicted Values')
