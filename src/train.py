@@ -115,8 +115,8 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     print(f"Number of training games is {_config.number_of_evaluations_for_training}")
 
     # Create DataLoaders
-    _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True)
-    _val_loader = DataLoader(val_dataset, batch_size=_config.batch_size, shuffle=False)
+    _train_loader = DataLoader(train_dataset, batch_size=_config.batch_size, shuffle=True, num_workers=20)
+    _val_loader = DataLoader(val_dataset, batch_size=_config.batch_size, shuffle=False, num_workers=20)
 
     print("Prepare dataloaders finished ...")
     return _train_loader, _val_loader
