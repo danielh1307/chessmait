@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, random_split
 from src.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
-from src.model.ChessmaitMlp5 import ChessmaitMlp5
+from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 from src.lib.utilities import get_device
 
 
@@ -31,7 +31,7 @@ def get_training_configuration() -> argparse.Namespace:
     """
     _config = argparse.Namespace()
     _config.train_percentage = 0.85  # percentage of data which is used for training
-    _config.learning_rate = 0.001
+    _config.learning_rate = 0.0001
 
     # for Adam optimizer
     _config.betas = (0.90, 0.99)  # needed for Adam optimizer
@@ -41,8 +41,8 @@ def get_training_configuration() -> argparse.Namespace:
     # _config.momentum = 0.7
     # _config.weight_decay = 1e-8
 
-    _config.epochs = 15
-    _config.batch_size = 1024
+    _config.epochs = 50
+    _config.batch_size = 64
     _config.fen_to_tensor_method = FEN_TO_TENSOR_METHOD
 
     return _config
@@ -53,22 +53,21 @@ def get_training_configuration() -> argparse.Namespace:
 #################################################################################################
 # Datafiles to load
 PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
-PATH_TO_PICKLEFILE = os.path.join("data", "preprocessed")
+PATH_TO_PICKLEFILE = os.path.join("data", "angelo")
 # set either PICKLE_FILES or DATA_FILES
 # PICKLE_FILES: contains already the correct tensors
 # DATA_FILES: contains FEN position, tensors have to be created
-PICKLE_FILES = []
-#PICKLE_FILES = ["lichess_db_standard_rated_2023-03-001.pkl",
-#                "lichess_db_standard_rated_2023-03-002.pkl"]
-DATA_FILES = ["kaggle_preprocessed_1000.csv"]
+PICKLE_FILES = ["01_with_mate.pkl", "02_with_mate.pkl", "03_with_mate.pkl", "04_with_mate.pkl", "06_with_mate.pkl",
+                "07_with_mate.pkl", "08_with_mate.pkl", "09_with_mate.pkl", "10_with_mate.pkl"]
+DATA_FILES = []
 
-WANDB_REPORTING = False
+WANDB_REPORTING = True
 REGRESSION_TRAINING = True
-FEN_TO_TENSOR_METHOD = "fen_to_tensor_one_board"  # just for documentation
+FEN_TO_TENSOR_METHOD = "fen_to_bitboard"  # just for documentation
 
 # Model, loss function, optimizer
 config = get_training_configuration()
-model = ChessmaitMlp5()
+model = ChessmaitCnn4Bitboard()
 loss_function = nn.HuberLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, betas=config.betas, eps=config.eps)
 
