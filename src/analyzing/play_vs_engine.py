@@ -3,21 +3,21 @@ import random
 import chess
 import torch
 
-from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.utilities import fen_to_bitboard
 from src.lib.utilities import get_device, is_checkmate
-from src.model.ChessmaitMlp5 import ChessmaitMlp5
+from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 
 # This script allows you to play vs. one of our models.
 # Just fill the variables accordingly to your needs.
 
-model = ChessmaitMlp5()
-model.load_state_dict(torch.load("models/graceful-glitter-166.pth"))
+model = ChessmaitCnn4Bitboard()
+model.load_state_dict(torch.load("models/fresh-blaze-174.pth"))
 model.eval()
 
 NORMALIZATION_USED = False
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
-CHESSMAIT_PLAYS_WHITE = False
+CHESSMAIT_PLAYS_WHITE = True
 
 
 def reverse_normalisiation(normalized_evaluation):
@@ -29,7 +29,7 @@ def reverse_normalisiation(normalized_evaluation):
 def evaluate_board(board, device):
     # evaluate the current posision
     current_fen = board.fen()
-    current_fen_in_tensor = fen_to_tensor_one_board(current_fen).to(device)
+    current_fen_in_tensor = fen_to_bitboard(current_fen).to(device)
 
     with torch.no_grad():
         input_batch = current_fen_in_tensor.unsqueeze(0)
