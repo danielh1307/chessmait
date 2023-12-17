@@ -49,4 +49,5 @@ model_lemon_plasma_103 = TrainedModel("lemon-plasma-103.pth", 1000, -1000, 2, 0,
 model_graceful_glitter_166 = TrainedModel("graceful-glitter-166.pth", 1000, -1000, 2, 0, device, use_normalization=False)
 model_effortless_vortex_142 = TrainedModel("effortless-vortex-142.pth", 1000, -1000, 5, 2, device, use_normalization=False)
 model_apricot_armadillo_167 = TrainedModel("apricot-armadillo-167.pth", 1000, -1000, 2, 0, device, use_normalization=False)
+model_fresh_blaze_174 = TrainedModel("fresh-blaze-174.pth", 1000, -1000, 5, 2, device, use_normalization=False)
 

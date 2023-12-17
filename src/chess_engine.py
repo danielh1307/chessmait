@@ -6,7 +6,7 @@ import torch as tc
 import src.board_status as bs
 import src.trained_model as tm
 from src.lib.position_validator import get_valid_positions
-from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc
+from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc, fen_to_bitboard
 from src.lib.utilities import fen_to_tensor_one_board, is_checkmate
 
 
@@ -16,6 +16,9 @@ def get_valid_moves_with_evaluation(current_position, trained_model):
     for valid_position in valid_positions:
         if trained_model.fen_to_tensor == 1:
             t = fen_to_cnn_tensor_non_hot_enc(valid_position)
+            t = tc.unsqueeze(t, dim=0)
+        elif trained_model.fen_to_tensor == 2:
+            t = fen_to_bitboard(valid_position)
             t = tc.unsqueeze(t, dim=0)
         else:
             t = fen_to_tensor_one_board(valid_position)
