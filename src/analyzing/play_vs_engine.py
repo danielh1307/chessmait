@@ -1,23 +1,24 @@
 import random
+import sys
 
 import chess
 import torch
 
-from src.lib.utilities import fen_to_bitboard
-from src.lib.utilities import get_device, is_checkmate
-from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
+from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.utilities import get_device, is_checkmate, is_stalemate
+from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # This script allows you to play vs. one of our models.
 # Just fill the variables accordingly to your needs.
 
-model = ChessmaitCnn4Bitboard()
-model.load_state_dict(torch.load("models/fresh-blaze-174.pth"))
+model = ChessmaitMlp5()
+model.load_state_dict(torch.load("models/apricot-armadillo-167.pth"))
 model.eval()
 
 NORMALIZATION_USED = False
 MAX_EVALUATION = 12352
 MIN_EVALUATION = -12349
-CHESSMAIT_PLAYS_WHITE = True
+CHESSMAIT_PLAYS_WHITE = False
 
 
 def reverse_normalisiation(normalized_evaluation):
@@ -29,7 +30,7 @@ def reverse_normalisiation(normalized_evaluation):
 def evaluate_board(board, device):
     # evaluate the current posision
     current_fen = board.fen()
-    current_fen_in_tensor = fen_to_bitboard(current_fen).to(device)
+    current_fen_in_tensor = fen_to_tensor_one_board(current_fen).to(device)
 
     with torch.no_grad():
         input_batch = current_fen_in_tensor.unsqueeze(0)
@@ -38,19 +39,45 @@ def evaluate_board(board, device):
         return output
 
 
-def get_next_move_model(board, device):
+def get_next_moves_with_evaluation(_board, _device):
     all_possible_moves = []
-
-    # now we evaluate each move
-    for possible_next_move in list(board.legal_moves):
-        board_copy = board.copy()
+    for possible_next_move in list(_board.legal_moves):
+        board_copy = _board.copy()
         board_copy.push_uci(possible_next_move.uci())
         if is_checkmate(board_copy.fen()):
             # a checkmate is always the best move
-            return possible_next_move
+            next_move_evaluation = sys.maxsize if _board.turn == chess.WHITE else sys.maxsize * (-1)
+            all_possible_moves.append((possible_next_move, next_move_evaluation))
+            return all_possible_moves
+        elif is_stalemate(board_copy.fen()):
+            # we do not want to stalemate the opponent
+            next_move_evaluation = sys.maxsize if _board.turn == chess.BLACK else sys.maxsize * (-1)
+            all_possible_moves.append((possible_next_move, next_move_evaluation))
+        else:
+            all_possible_after_next_moves = []
+            # we calculate the evaluation of the next move
+            for possible_after_next_move in list(board_copy.legal_moves):
+                board_second_copy = board_copy.copy()
+                board_second_copy.push_uci(possible_after_next_move.uci())
+                # TODO add checkmate
+                after_next_move_evaluation = reverse_normalisiation(evaluate_board(board_second_copy, _device).item())
+                #print(f"{possible_next_move} Possible after next move: {possible_after_next_move}, evaluation: {after_next_move_evaluation}")
+                all_possible_after_next_moves.append((possible_next_move, after_next_move_evaluation))
 
-        next_move_evaluation = reverse_normalisiation(evaluate_board(board_copy, device).item())
+            # our next_move_evaluation is the best score from all all_possible_after_next_moves
+            if CHESSMAIT_PLAYS_WHITE:
+                #print(all_possible_after_next_moves)
+                next_move_evaluation = min(all_possible_after_next_moves, key=lambda x: x[1])[1]
+            else:
+                next_move_evaluation = max(all_possible_after_next_moves, key=lambda x: x[1])[1]
+            # next_move_evaluation = reverse_normalisiation(evaluate_board(board_copy, _device).item())
+        #print(f"Possible next move: {possible_next_move}, evaluation: {next_move_evaluation}")
         all_possible_moves.append((possible_next_move, next_move_evaluation))
+    return all_possible_moves
+
+
+def get_next_move_model(_board, _device):
+    all_possible_moves = get_next_moves_with_evaluation(_board, _device)
 
     # get the best evaluation
     if CHESSMAIT_PLAYS_WHITE:
