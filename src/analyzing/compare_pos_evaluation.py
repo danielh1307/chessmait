@@ -1,10 +1,13 @@
 import argparse
+import os
 
 import chess
 import chess.engine
 import chess.svg
+import pandas as pd
 import torch
 
+from src.lib.analytics_utilities import count_pieces
 from src.lib.utilities import fen_to_tensor_one_board
 from src.lib.utilities import get_device
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
@@ -45,21 +48,51 @@ def evaluate_board_by_stockfish(_board, path_to_chess_engine):
         return info["score"].white().score()
 
 
-def get_next_move_model(_board, path_to_chess_engine):
+def get_all_moves_evaluated(_board, path_to_chess_engine=None):
     all_possible_moves = {}
 
     # now we evaluate each move
     for possible_next_move in list(_board.legal_moves):
         board_copy = _board.copy()
+        board_copy_san = _board.copy()
         board_copy.push_uci(possible_next_move.uci())
         next_move_evaluation_model = evaluate_board_by_model(board_copy).item()
-        next_move_evaluation_stockfish = evaluate_board_by_stockfish(board_copy, path_to_chess_engine)
-        all_possible_moves[possible_next_move.uci()] = {
+        next_move_evaluation_stockfish = evaluate_board_by_stockfish(board_copy,
+                                                                     path_to_chess_engine) if path_to_chess_engine else 0
+        # make sure notation of move is algebraic
+        move = chess.Move.from_uci(possible_next_move.uci())
+        all_possible_moves[board_copy_san.san(move)] = {
             "model": next_move_evaluation_model,
             "stockfish": next_move_evaluation_stockfish
         }
 
     return all_possible_moves
+
+
+def sort_evaluated_moves(_board, _all_moves, sort_by):
+    all_moves_sorted = dict(sorted(_all_moves.items(), key=lambda item: item[1][sort_by], reverse=_board.turn))
+    return [(key, value[sort_by]) for key, value in all_moves_sorted.items()]
+
+
+def get_best_move_model(_board, winning_move):
+    _all_moves = get_all_moves_evaluated(_board)
+    sorted_evaluated_moves = sort_evaluated_moves(_board, _all_moves, 'model')
+    evaluated_move = sorted_evaluated_moves[0][0]
+    _i = 1
+    for move in sorted_evaluated_moves:
+        if move[0] == winning_move:
+            break
+        _i += 1
+    return f"{evaluated_move} ({_i})"
+
+
+def kaufman():
+    df = pd.read_csv(os.path.join("src", "analyzing", "kaufman_test.csv"))
+    df["Num_Pieces"] = df["FEN"].apply(lambda x: count_pieces(x))
+    df['Evaluated_Move'] = df.apply(lambda row: get_best_move_model(chess.Board(row['FEN']), row['Winning_Move']),
+                                    axis=1)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df[['id', 'Winning_Move', 'Evaluated_Move', 'Num_Pieces']])
 
 
 if __name__ == "__main__":
@@ -72,19 +105,18 @@ if __name__ == "__main__":
     model.eval()
 
     while True:
-        fen = input("What is your FEN position (q to quit)?")
+        fen = input("What is your FEN position ('kaufman' for kaufman test or 'q' to quit)?")
         if fen == "q":
             break
+        elif fen == "kaufman":
+            kaufman()
+            continue
+
         board = chess.Board(fen)
 
-        all_moves = get_next_move_model(board, args.path_to_chess_engine)
-        all_moves_sorted_model = dict(sorted(all_moves.items(), key=lambda item: item[1]['model'], reverse=board.turn))
-        all_moves_sorted_stockfish = dict(
-            sorted(all_moves.items(), key=lambda item: item[1]['stockfish'], reverse=board.turn))
-
-        all_moves_sorted_model_array = [(key, value['model']) for key, value in all_moves_sorted_model.items()]
-        all_moves_sorted_stockfish_array = [(key, value['stockfish']) for key, value in
-                                            all_moves_sorted_stockfish.items()]
+        all_moves = get_all_moves_evaluated(board, args.path_to_chess_engine)
+        all_moves_sorted_model_array = sort_evaluated_moves(board, all_moves, 'model')
+        all_moves_sorted_stockfish_array = sort_evaluated_moves(board, all_moves, 'stockfish')
 
         print("Rank\tModel move\tModel eval\tStockfish move\tStockfish eval")
         for i in range(len(all_moves_sorted_model_array)):
