@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     print("RL training start ***")
 
-    for episode_training in range(100001):
+    for episode_training in range(1, 100001):
 
         env.reset()
         rounds_training = 0

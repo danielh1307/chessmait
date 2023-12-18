@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     best_loss = float('inf')
 
-    for episode_training in range(100001):
+    for episode_training in range(1, 100001):
 
         env.reset()
         rounds = 0
