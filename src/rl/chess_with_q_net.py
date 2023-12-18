@@ -7,9 +7,10 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import copy
 import random
 import chess.engine
-from collections import deque, namedtuple
+from collections import deque
 from src.lib.position_validator import get_valid_positions
 from src.board_status import BoardStatus
 
@@ -18,13 +19,13 @@ PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.
 EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
 MIN_EPS = 0.1 # ...until this minimum eps is reached
 GAMMA = 0.95 # discount
-MAX_MEMORY_SIZE = 100 # size of the replay memory
+MAX_MEMORY_SIZE = 1000 # size of the replay memory
 BATCH_SIZE = 32 # batch size of the neural network training
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 64
 IN_FEATURES = BOARD_SIZE
-OUT_FEATURES = 16
+OUT_FEATURES = 128
 
 
 class QNet(nn.Module):
@@ -40,15 +41,20 @@ class QNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2)
         )
+        self.layer3 = nn.Sequential(
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
         self.output_layer = nn.Sequential(
             nn.Linear(OUT_FEATURES, BOARD_SIZE),
-            nn.Sigmoid()
         )
         self.double()
 
     def forward(self, x):
         x = self.layer1(x)
         x = self.layer2(x)
+        x = self.layer3(x)
         return self.output_layer(x)
 
 
@@ -116,6 +122,7 @@ class QNetContext:
 def board_to_tensor_with_state(this_state):
     return torch.tensor(this_state, device=device, dtype=float).flatten()
 
+
 def board_to_tensor_with_board(this_board):
     int_board = board_status.convert_to_int(this_board)
     return torch.tensor(np.array(int_board), device=device, dtype=float).flatten()
@@ -127,8 +134,7 @@ def board_to_array(this_board):
 
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 q_net = QNetContext()
-#env = chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE)
-#env.configure({"UCI_Elo": 1320})
+env = chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE)
 board = chess.Board()
 board_status = BoardStatus()
 eps = 0.3 # exploration rate, probability of choosing random action
@@ -243,12 +249,19 @@ def evaluate_moves(before, after):
 def select_action(is_white, is_training, model):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
-    if not is_white or random.random() < eps and is_training:
+    if not is_white:
+        result = env.play(board, chess.engine.Limit(time=0.1, depth=5, nodes=5))
+        new_board = chess.Board()
+        new_board.set_fen(board.fen())
+        new_board.push(result.move)
+        after = board_to_array(new_board)
+        return evaluate_moves(before, after)
+    elif random.random() < eps and is_training:
         index = random.randint(0, len(legal_moves_fen)-1)
         after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
     else:
-        output = q_net.get_q_values(board, q_net.policy_net)
+        output = q_net.get_q_values(board, model)
         legal_moves_index = np.zeros(BOARD_SIZE)
         move_list = []
         for legal_move in legal_moves_fen:
@@ -257,6 +270,7 @@ def select_action(is_white, is_training, model):
             move_list.append((move_from, move_to, promotion, reward))
             legal_moves_index[move_to[0]] = 1
         output[legal_moves_index != 1] = 0
+        output[output == 0] = float('-inf')
         move_to = output.argmax().item()
         for move in move_list:
             if move[1][0].item() == move_to:
@@ -281,7 +295,7 @@ def get_actions(action_from, action_to, promotion_index):
 
 def play_and_print(color, action_from, action_to):
     if SHOW_BOARD:
-        print(f"--------------- round: {rounds} {color} - san: '{action_from}{action_to}'")
+        print(f"--------------- round: {rounds_training} {color} - san: '{action_from}{action_to}'")
         board_status.cache(board)
     play(action_from, action_to)
     if SHOW_BOARD:
@@ -293,19 +307,30 @@ def play(action_from, action_to):
     board.push(move)
 
 
+def white_is_winner(reason):
+    return reason != "Termination.FIVEFOLD_REPETITION" and reason != "Termination.STALEMATE"
+
+
+def black_is_winner(reason):
+    return reason == "Termination.INSUFFICIENT_MATERIAL" and reason != "Termination.STALEMATE"
+
+
 letters = ['a','b','c','d','e','f','g','h']
 
 SHOW_BOARD = False
+MAX_ROUNDS = 50
+
+reasons = []
 
 if __name__ == "__main__":
 
-    start = time.time()
+    start_overall = time.time()
 
-    file_name = "chess-statistics-q-net.csv"
+    file_name = os.path.join("src", "rl", "chess-statistics-q-net.csv")
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
-        f.write("#of-trainings\twhite-training-won\t#black-training-won\tdraw-training\t#of-test-games\twhite-test-won\tblack-test-won\tdraw-test\tbest-loss\n")
+        f.write("#of-trainings\twhite-training-won\t#black-training-won\tdraw-training\t#of-test-games\twhite-test-won\tblack-test-won\tdraw-test\tbest-loss\taverage-rounds-played\tduration\n")
 
     games_training = {"draw": 0, "white": 0, "black": 0}
 
@@ -318,15 +343,19 @@ if __name__ == "__main__":
     # Keep track of steps since model and target model were updated
     steps_since_model_update = 0
 
-    for episode_training in range(101):
+    start_episode = time.time()
+
+    rounds_training_total = 0
+
+    for episode_training in range(10001):
 
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
-        rounds = 0
+        rounds_training = 0
         winner_name = "draw"
         global_reward = 0.0
 
-        while not board.is_game_over() and rounds < 50:
-            global_reward -= rounds * 0.0001
+        while not board.is_game_over() and rounds_training < MAX_ROUNDS:
+            global_reward -= rounds_training * 0.0001
             action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, True, q_net.policy_net)
             action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
             state_table_before = board_to_array(board)
@@ -341,12 +370,17 @@ if __name__ == "__main__":
                 if SHOW_BOARD:
                     print(f"reward: {reward}, promotion: {promotion}")
                 replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
-                winner_name = "white"
+                reason = board_status.reason_why_the_game_is_over(board)
+                if reason not in reasons:
+                    reasons.append(reason)
+                if white_is_winner(reason):
+                    winner_name = "white"
             else:
                 action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, True, q_net.policy_net)
                 action_from_str, action_to_str = get_actions(action_from_black, action_to_black, promotion)
                 play_and_print("black", action_from_str, action_to_str)
                 if board.is_game_over():
+                    reason = board_status.reason_why_the_game_is_over(board)
                     if reward_after_black_move == NO_REWARD:
                         reward = global_reward
                     else:
@@ -354,7 +388,10 @@ if __name__ == "__main__":
                     if SHOW_BOARD:
                         print(f"reward: {reward}")
                     replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
-                    winner_name = "black"
+                    if reason not in reasons:
+                        reasons.append(reason)
+                    if black_is_winner(reason):
+                        winner_name = "black"
                 else:
                     if reward_after_white_move == NO_REWARD and reward_after_black_move == NO_REWARD:
                         reward = global_reward
@@ -364,8 +401,10 @@ if __name__ == "__main__":
                         print(f"reward: {reward}, promotion: {promotion}")
                     replay_memory.store([state_table_before, action_to_white, reward, state_table_after, False])
 
-            rounds += 1
+            rounds_training += 1
             steps_since_model_update += 1
+
+        rounds_training_total += rounds_training
 
         if steps_since_model_update >= 10:
             loss = q_net.optimize(replay_memory, BATCH_SIZE)
@@ -377,11 +416,16 @@ if __name__ == "__main__":
         eps = max(MIN_EPS, eps * EPS_DECAY)
         games_training[winner_name] += 1
 
-        if episode_training % 10 == 0 and episode_training != 0:
-            print(f"episode: {episode_training} - best-loss: {best_loss}")
-
-        '''
         if episode_training % 100 == 0 and episode_training != 0:
+            print(f"episode: {episode_training:6} - best-loss: {best_loss} - average rounds played: {(rounds_training_total/100):0.1f}")
+            rounds_training_total = 0
+
+        if episode_training % 1000 == 0 and episode_training != 0:
+
+            end = time.time()
+            print(f"duration: {(end - start_episode):0.1f}s")
+
+            start_training = time.time()
 
             print("-----------------------------")
             print(f"Tests episode: {episode_training}")
@@ -391,45 +435,64 @@ if __name__ == "__main__":
             model = copy.deepcopy(q_net.target_net)
             model.eval()
 
+            rounds_test_total = 0
+
             for episode_test in range(1000):
 
                 board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
                 rounds_test = 0
                 winner_name = "draw"
 
-                while not board.is_game_over():
-                    action = select_action(True, False, model)
-                    action_from, action_to = get_actions(action)
-                    play(action_from, action_to)
+                while not board.is_game_over() and rounds_test < MAX_ROUNDS:
+                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, False, q_net.policy_net)
+                    action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
+                    play(action_from_str, action_to_str)
 
                     if board.is_game_over():
-                        winner_name = "white"
+                        reason = board_status.reason_why_the_game_is_over(board)
+                        if reason not in reasons:
+                            reasons.append(reason)
+                        if white_is_winner(reason):
+                            winner_name = "white"
                     else:
-                        action = select_action(False, False, model)
-                        action_from, action_to = get_actions(action)
-                        play(action_from, action_to)
+                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False,False, model)
+                        action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
+                        play(action_from_str, action_to_str)
                         if board.is_game_over():
-                            winner_name = "black"
+                            reason = board_status.reason_why_the_game_is_over(board)
+                            if reason not in reasons:
+                                reasons.append(reason)
+                            if black_is_winner(reason):
+                                winner_name = "black"
 
                     rounds_test += 1
 
                 games_test[winner_name] += 1
+                rounds_test_total += rounds_test
 
             print("Player     Training     Test")
             print(f"draw:      {games_training['draw']:8}\t{games_test['draw']:8}")
             print(f"white:     {games_training['white']:8}\t{games_test['white']:8}")
             print(f"black:     {games_training['black']:8}\t{games_test['black']:8}")
+            print(f"average rounds played: {(rounds_test_total/1000):0.1f}")
+
+            end = time.time()
+            print(f"duration: {(end - start_training):0.1f}s")
 
             with open(file_name, 'a') as f:
-                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t1000\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\n")
-        '''
-    torch.save(q_net.target_net.state_dict(), "chess.pth")
+                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t1000\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\t{(rounds_test_total/1000):0.1f}\t{(end - start_training):0.1f}\n")
+
+            start_episode = time.time()
+
+    torch.save(q_net.target_net.state_dict(), os.path.join("src", "rl", "chess.pth"))
+
+    print(reasons)
 
     print("-----------------------------")
     print("RL training end ***")
 
-    #env.close()
+    env.close()
     end = time.time()
     with open(file_name, 'a') as f:
-        f.write(f"duration: {(end - start):0.1f}s\n")
-    print(f"duration: {(end - start):0.1f}s")
+        f.write(f"duration: {(end - start_overall):0.1f}s\n")
+    print(f"duration: {(end - start_overall):0.1f}s")
