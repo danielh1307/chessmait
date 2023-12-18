@@ -1,8 +1,8 @@
 import os
-import src.board_status as bs
+import play.board_status as bs
 from stockfish import Stockfish
-import src.chess_engine as ce
-import src.trained_model as tm
+import play.chess_engine as ce
+import play.trained_model as tm
 import chess
 from timeit import default_timer as timer
 

@@ -1,8 +1,8 @@
 import chess.engine
 import os
-import src.board_status as bs
-import src.chess_engine as ce
-import src.trained_model as tm
+import play.board_status as bs
+import play.chess_engine as ce
+import play.trained_model as tm
 from timeit import default_timer as timer
 from enum import Enum
 
