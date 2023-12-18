@@ -61,17 +61,13 @@ def get_next_moves_with_evaluation(_board, _device):
                 board_second_copy.push_uci(possible_after_next_move.uci())
                 # TODO add checkmate
                 after_next_move_evaluation = reverse_normalisiation(evaluate_board(board_second_copy, _device).item())
-                #print(f"{possible_next_move} Possible after next move: {possible_after_next_move}, evaluation: {after_next_move_evaluation}")
                 all_possible_after_next_moves.append((possible_next_move, after_next_move_evaluation))
 
             # our next_move_evaluation is the best score from all all_possible_after_next_moves
             if CHESSMAIT_PLAYS_WHITE:
-                #print(all_possible_after_next_moves)
                 next_move_evaluation = min(all_possible_after_next_moves, key=lambda x: x[1])[1]
             else:
                 next_move_evaluation = max(all_possible_after_next_moves, key=lambda x: x[1])[1]
-            # next_move_evaluation = reverse_normalisiation(evaluate_board(board_copy, _device).item())
-        #print(f"Possible next move: {possible_next_move}, evaluation: {next_move_evaluation}")
         all_possible_moves.append((possible_next_move, next_move_evaluation))
     return all_possible_moves
 
