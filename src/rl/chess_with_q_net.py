@@ -1,6 +1,8 @@
-# inspired by https://nestedsoftware.com/2019/12/27/tic-tac-toe-with-a-neural-network-1fjn.206436.html
-# and https://medium.com/towards-data-science/hands-on-deep-q-learning-9073040ce841
+# inspired by: https://medium.com/towards-data-science/hands-on-deep-q-learning-9073040ce841
+# elo vs depth: http://web.ist.utl.pt/diogo.ferreira/papers/ferreira13impact.pdf
+# elo vs time-limit: https://www.chess.com/forum/view/general/i-want-a-good-analysis-with-stockfish-how-long-should-i-do-1-min-1-hour-1-day#:~:text=1%20min%20per%20position%20of%20analysis%20will%20be,rating%20may%20be%20as%20low%20as%20900%20rating.
 
+import math
 import os
 import numpy as np
 import time
@@ -16,38 +18,44 @@ from src.board_status import BoardStatus
 
 PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.exe")
 
-EPS_DECAY = 0.95 # eps gets multiplied by this number each epoch...
-MIN_EPS = 0.1 # ...until this minimum eps is reached
-GAMMA = 0.95 # discount
-MAX_MEMORY_SIZE = 1000 # size of the replay memory
-BATCH_SIZE = 32 # batch size of the neural network training
+BATCH_SIZE = 128 # the number of transitions sampled from the replay buffer
+GAMMA = 0.99 # the discount factor as mentioned in the previous section
+EPS_START = 0.9 # the starting value of epsilon
+EPS_END = 0.05 # the final value of epsilon
+EPS_DECAY = 1000 # controls the rate of exponential decay of epsilon, higher means a slower decay
+TAU = 0.005 # the update rate of the target network
+LR = 1e-6 # the learning rate of the optimizer
+MAX_MEMORY_SIZE = 10000 # size of the replay memory
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 64
-IN_FEATURES = BOARD_SIZE
-OUT_FEATURES = 128
 
 
 class QNet(nn.Module):
     def __init__(self):
         super(QNet, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Linear(IN_FEATURES, OUT_FEATURES),
+            nn.Linear(BOARD_SIZE, 256),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer2 = nn.Sequential(
-            nn.Linear(OUT_FEATURES, OUT_FEATURES),
+            nn.Linear(256, 1024),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer3 = nn.Sequential(
-            nn.Linear(OUT_FEATURES, OUT_FEATURES),
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+        self.layer4 = nn.Sequential(
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.output_layer = nn.Sequential(
-            nn.Linear(OUT_FEATURES, BOARD_SIZE),
+            nn.Linear(256, BOARD_SIZE),
         )
         self.double()
 
@@ -55,7 +63,12 @@ class QNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        x = self.layer4(x)
         return self.output_layer(x)
+
+
+OPTIMIZER = 3
+LOSS_FUNCTION = 3
 
 
 class QNetContext:
@@ -66,14 +79,20 @@ class QNetContext:
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net = self.target_net.eval()
 
-        self.optimizer = optim.SGD(self.policy_net.parameters(), lr=1e-4)
-        self.loss_function = nn.MSELoss()
+        self.optimizer1 = optim.SGD(self.policy_net.parameters(), lr=LR)
+        self.optimizer2 = optim.Adagrad(self.policy_net.parameters(), lr=LR)
+        self.optimizer3 = optim.Adam(self.policy_net.parameters(), lr=LR)
+        self.optimizer4 = optim.AdamW(self.policy_net.parameters(), lr=LR, amsgrad=True)
 
-    def optimize(self, replay_memory, batch_size):
+        self.loss_function1 = nn.MSELoss()
+        self.loss_function2 = nn.HuberLoss()
+        self.loss_function3 = nn.SmoothL1Loss()
+
+    def optimize(self, replay_memory):
         if len(replay_memory) < BATCH_SIZE:
             return
 
-        mini_batch = replay_memory.structured_sample(batch_size) # get samples from the replay memory
+        mini_batch = replay_memory.structured_sample(BATCH_SIZE) # get samples from the replay memory
 
         # Get the Q values for the initial states of the trajectories from the model
         initial_states = np.array([batch[0] for batch in mini_batch])
@@ -105,11 +124,27 @@ class QNetContext:
             updated_qs[index] = updated_qs_sample
 
         predicted_qs = self.policy_net(torch.tensor(states, device=device, dtype=torch.double))
-        loss = self.loss_function(predicted_qs, updated_qs)
+        if LOSS_FUNCTION == 2:
+            loss_function = self.loss_function2
+        elif LOSS_FUNCTION == 3:
+            loss_function = self.loss_function3
+        else:
+            loss_function = self.loss_function1
 
-        self.optimizer.zero_grad()
+        if OPTIMIZER == 2:
+            optimizer = self.optimizer2
+        elif OPTIMIZER == 3:
+            optimizer = self.optimizer3
+        elif OPTIMIZER == 4:
+            optimizer = self.optimizer4
+        else:
+            optimizer = self.optimizer1
+
+        loss = loss_function(predicted_qs, updated_qs)
+        optimizer.zero_grad()
         loss.backward()
-        self.optimizer.step()
+        torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
+        optimizer.step()
 
         return loss
 
@@ -137,7 +172,7 @@ q_net = QNetContext()
 env = chess.engine.SimpleEngine.popen_uci(PATH_TO_CHESS_ENGINE)
 board = chess.Board()
 board_status = BoardStatus()
-eps = 0.3 # exploration rate, probability of choosing random action
+eps_threshold = EPS_START
 
 
 class ReplayMemory:
@@ -246,21 +281,37 @@ def evaluate_moves(before, after):
         raise Exception("no valid move evaluated overall")
 
 
-def select_action(is_white, is_training, model):
+greedy_policy = { True: 0, False: 0}
+
+
+def select_action(is_white, is_training, model, episode):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
     if not is_white:
-        result = env.play(board, chess.engine.Limit(time=0.1, depth=5, nodes=5))
+        if episode < EPISODES_TRAIN * 0.2:
+            result = env.play(board, chess.engine.Limit(time=0.005, depth=1))
+        elif episode < EPISODES_TRAIN * 0.4:
+            result = env.play(board, chess.engine.Limit(time=0.010, depth=2))
+        elif episode < EPISODES_TRAIN * 0.6:
+            result = env.play(board, chess.engine.Limit(time=0.020, depth=3))
+        elif episode < EPISODES_TRAIN * 0.8:
+            result = env.play(board, chess.engine.Limit(time=0.040, depth=4))
+        elif episode < EPISODES_TRAIN * 0.9:
+            result = env.play(board, chess.engine.Limit(time=0.080, depth=5))
+        else:
+            result = env.play(board, chess.engine.Limit(time=0.100, depth=6))
         new_board = chess.Board()
         new_board.set_fen(board.fen())
         new_board.push(result.move)
         after = board_to_array(new_board)
         return evaluate_moves(before, after)
-    elif random.random() < eps and is_training:
+    elif random.random() < eps_threshold and is_training:
+        greedy_policy[False] += 1
         index = random.randint(0, len(legal_moves_fen)-1)
         after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
     else:
+        greedy_policy[True] += 1
         output = q_net.get_q_values(board, model)
         legal_moves_index = np.zeros(BOARD_SIZE)
         move_list = []
@@ -312,13 +363,15 @@ def white_is_winner(reason):
 
 
 def black_is_winner(reason):
-    return reason == "Termination.INSUFFICIENT_MATERIAL" and reason != "Termination.STALEMATE"
+    return reason == "Termination.INSUFFICIENT_MATERIAL"
 
 
 letters = ['a','b','c','d','e','f','g','h']
 
 SHOW_BOARD = False
 MAX_ROUNDS = 50
+EPISODES_TEST = 1000
+EPISODES_TRAIN = 100000
 
 reasons = []
 
@@ -347,7 +400,7 @@ if __name__ == "__main__":
 
     rounds_training_total = 0
 
-    for episode_training in range(10001):
+    for episode_training in range(1, EPISODES_TRAIN+1):
 
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
         rounds_training = 0
@@ -356,7 +409,7 @@ if __name__ == "__main__":
 
         while not board.is_game_over() and rounds_training < MAX_ROUNDS:
             global_reward -= rounds_training * 0.0001
-            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, True, q_net.policy_net)
+            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, True, q_net.policy_net, episode_training)
             action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
             state_table_before = board_to_array(board)
             play_and_print("white", action_from_str, action_to_str)
@@ -376,7 +429,7 @@ if __name__ == "__main__":
                 if white_is_winner(reason):
                     winner_name = "white"
             else:
-                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, True, q_net.policy_net)
+                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, True, q_net.policy_net, episode_training)
                 action_from_str, action_to_str = get_actions(action_from_black, action_to_black, promotion)
                 play_and_print("black", action_from_str, action_to_str)
                 if board.is_game_over():
@@ -407,20 +460,25 @@ if __name__ == "__main__":
         rounds_training_total += rounds_training
 
         if steps_since_model_update >= 10:
-            loss = q_net.optimize(replay_memory, BATCH_SIZE)
+            loss = q_net.optimize(replay_memory)
             steps_since_model_update = 0
             if loss is not None and loss < best_loss:
                 best_loss = loss
-                q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
+                # Soft update of the target network's weights
+                target_net_state_dict = q_net.target_net.state_dict()
+                policy_net_state_dict = q_net.policy_net.state_dict()
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
+                q_net.target_net.load_state_dict(target_net_state_dict)
 
-        eps = max(MIN_EPS, eps * EPS_DECAY)
+        eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * rounds_training_total / EPS_DECAY)
         games_training[winner_name] += 1
 
-        if episode_training % 100 == 0 and episode_training != 0:
-            print(f"episode: {episode_training:6} - best-loss: {best_loss} - average rounds played: {(rounds_training_total/100):0.1f}")
+        if episode_training % (EPISODES_TEST/10) == 0 and episode_training != 0:
+            print(f"episode: {episode_training:6} - best-loss: {best_loss:0.16f} - average rounds played: {(rounds_training_total/EPISODES_TEST*10):0.1f}")
             rounds_training_total = 0
 
-        if episode_training % 1000 == 0 and episode_training != 0:
+        if episode_training % EPISODES_TEST == 0 and episode_training != 0:
 
             end = time.time()
             print(f"duration: {(end - start_episode):0.1f}s")
@@ -437,14 +495,14 @@ if __name__ == "__main__":
 
             rounds_test_total = 0
 
-            for episode_test in range(1000):
+            for episode_test in range(EPISODES_TEST):
 
                 board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
                 rounds_test = 0
                 winner_name = "draw"
 
                 while not board.is_game_over() and rounds_test < MAX_ROUNDS:
-                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, False, q_net.policy_net)
+                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, False, model, EPISODES_TRAIN)
                     action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                     play(action_from_str, action_to_str)
 
@@ -455,7 +513,7 @@ if __name__ == "__main__":
                         if white_is_winner(reason):
                             winner_name = "white"
                     else:
-                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False,False, model)
+                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False,False, model, EPISODES_TRAIN)
                         action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                         play(action_from_str, action_to_str)
                         if board.is_game_over():
@@ -474,19 +532,21 @@ if __name__ == "__main__":
             print(f"draw:      {games_training['draw']:8}\t{games_test['draw']:8}")
             print(f"white:     {games_training['white']:8}\t{games_test['white']:8}")
             print(f"black:     {games_training['black']:8}\t{games_test['black']:8}")
-            print(f"average rounds played: {(rounds_test_total/1000):0.1f}")
+            print(f"average rounds played: {(rounds_test_total/EPISODES_TEST):0.1f}")
 
             end = time.time()
             print(f"duration: {(end - start_training):0.1f}s")
 
             with open(file_name, 'a') as f:
-                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t1000\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\t{(rounds_test_total/1000):0.1f}\t{(end - start_training):0.1f}\n")
+                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t{EPISODES_TEST}\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\t{(rounds_test_total/EPISODES_TEST):0.1f}\t{(end - start_training):0.1f}\n")
 
             start_episode = time.time()
 
     torch.save(q_net.target_net.state_dict(), os.path.join("src", "rl", "chess.pth"))
 
     print(reasons)
+    print(f"exploration:  {greedy_policy[False]}")
+    print(f"exploitation: {greedy_policy[True]}")
 
     print("-----------------------------")
     print("RL training end ***")
