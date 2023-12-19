@@ -18,44 +18,45 @@ from src.board_status import BoardStatus
 
 PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.exe")
 
-BATCH_SIZE = 128 # the number of transitions sampled from the replay buffer
+BATCH_SIZE = 32 # the number of transitions sampled from the replay buffer
 GAMMA = 0.99 # the discount factor as mentioned in the previous section
 EPS_START = 0.9 # the starting value of epsilon
-EPS_END = 0.05 # the final value of epsilon
+EPS_END = 0.2 # the final value of epsilon
 EPS_DECAY = 1000 # controls the rate of exponential decay of epsilon, higher means a slower decay
-TAU = 0.005 # the update rate of the target network
-LR = 1e-6 # the learning rate of the optimizer
+TAU = 0.1 # the update rate of the target network
+LR = 0.0001 # the learning rate of the optimizer
 MAX_MEMORY_SIZE = 10000 # size of the replay memory
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 64
+OUT_FEATURES = 2048
 
 
 class QNet(nn.Module):
     def __init__(self):
         super(QNet, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Linear(BOARD_SIZE, 256),
+            nn.Linear(BOARD_SIZE, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer2 = nn.Sequential(
-            nn.Linear(256, 1024),
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer3 = nn.Sequential(
-            nn.Linear(1024, 1024),
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.layer4 = nn.Sequential(
-            nn.Linear(1024, 256),
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.2)
         )
         self.output_layer = nn.Sequential(
-            nn.Linear(256, BOARD_SIZE),
+            nn.Linear(OUT_FEATURES, BOARD_SIZE),
         )
         self.double()
 
@@ -67,8 +68,8 @@ class QNet(nn.Module):
         return self.output_layer(x)
 
 
-OPTIMIZER = 3
-LOSS_FUNCTION = 3
+OPTIMIZER = 1
+LOSS_FUNCTION = 1
 
 
 class QNetContext:
@@ -281,37 +282,22 @@ def evaluate_moves(before, after):
         raise Exception("no valid move evaluated overall")
 
 
-greedy_policy = { True: 0, False: 0}
-
-
-def select_action(is_white, is_training, model, episode):
+def select_action(is_white, model):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
     if not is_white:
-        if episode < EPISODES_TRAIN * 0.2:
-            result = env.play(board, chess.engine.Limit(time=0.005, depth=1))
-        elif episode < EPISODES_TRAIN * 0.4:
-            result = env.play(board, chess.engine.Limit(time=0.010, depth=2))
-        elif episode < EPISODES_TRAIN * 0.6:
-            result = env.play(board, chess.engine.Limit(time=0.020, depth=3))
-        elif episode < EPISODES_TRAIN * 0.8:
-            result = env.play(board, chess.engine.Limit(time=0.040, depth=4))
-        elif episode < EPISODES_TRAIN * 0.9:
-            result = env.play(board, chess.engine.Limit(time=0.080, depth=5))
-        else:
-            result = env.play(board, chess.engine.Limit(time=0.100, depth=6))
+        depth = random.randint(1,5)
+        result = env.play(board, chess.engine.Limit(time=depth / 100, depth=depth))
         new_board = chess.Board()
         new_board.set_fen(board.fen())
         new_board.push(result.move)
         after = board_to_array(new_board)
         return evaluate_moves(before, after)
-    elif random.random() < eps_threshold and is_training:
-        greedy_policy[False] += 1
+    elif random.random() < eps_threshold:
         index = random.randint(0, len(legal_moves_fen)-1)
         after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
     else:
-        greedy_policy[True] += 1
         output = q_net.get_q_values(board, model)
         legal_moves_index = np.zeros(BOARD_SIZE)
         move_list = []
@@ -371,7 +357,7 @@ letters = ['a','b','c','d','e','f','g','h']
 SHOW_BOARD = False
 MAX_ROUNDS = 50
 EPISODES_TEST = 1000
-EPISODES_TRAIN = 100000
+EPISODES_TRAIN = 10000
 
 reasons = []
 
@@ -383,7 +369,7 @@ if __name__ == "__main__":
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
-        f.write("#of-trainings\twhite-training-won\t#black-training-won\tdraw-training\t#of-test-games\twhite-test-won\tblack-test-won\tdraw-test\tbest-loss\taverage-rounds-played\tduration\n")
+        f.write("#of-trainings\tp1-training-won\tp2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\taverage-rounds-played\tduration\n")
 
     games_training = {"draw": 0, "white": 0, "black": 0}
 
@@ -409,7 +395,7 @@ if __name__ == "__main__":
 
         while not board.is_game_over() and rounds_training < MAX_ROUNDS:
             global_reward -= rounds_training * 0.0001
-            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, True, q_net.policy_net, episode_training)
+            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, q_net.policy_net)
             action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
             state_table_before = board_to_array(board)
             play_and_print("white", action_from_str, action_to_str)
@@ -429,7 +415,7 @@ if __name__ == "__main__":
                 if white_is_winner(reason):
                     winner_name = "white"
             else:
-                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, True, q_net.policy_net, episode_training)
+                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, q_net.policy_net)
                 action_from_str, action_to_str = get_actions(action_from_black, action_to_black, promotion)
                 play_and_print("black", action_from_str, action_to_str)
                 if board.is_game_over():
@@ -502,7 +488,7 @@ if __name__ == "__main__":
                 winner_name = "draw"
 
                 while not board.is_game_over() and rounds_test < MAX_ROUNDS:
-                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, False, model, EPISODES_TRAIN)
+                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, model)
                     action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                     play(action_from_str, action_to_str)
 
@@ -513,7 +499,7 @@ if __name__ == "__main__":
                         if white_is_winner(reason):
                             winner_name = "white"
                     else:
-                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False,False, model, EPISODES_TRAIN)
+                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False, model)
                         action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                         play(action_from_str, action_to_str)
                         if board.is_game_over():
@@ -545,8 +531,6 @@ if __name__ == "__main__":
     torch.save(q_net.target_net.state_dict(), os.path.join("src", "rl", "chess.pth"))
 
     print(reasons)
-    print(f"exploration:  {greedy_policy[False]}")
-    print(f"exploitation: {greedy_policy[True]}")
 
     print("-----------------------------")
     print("RL training end ***")

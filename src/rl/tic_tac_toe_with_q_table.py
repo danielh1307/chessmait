@@ -115,7 +115,7 @@ if __name__ == "__main__":
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
-        f.write("#of-trainings\tp1-training-won\t#p2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tq-table-size\n")
+        f.write("#of-trainings\tp1-training-won\tp2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tq-table-size\n")
 
     games_training = {"draw": 0, "player_1": 0, "player_2": 0}
 

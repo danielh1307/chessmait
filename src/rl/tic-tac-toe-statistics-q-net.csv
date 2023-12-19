@@ -1,4 +1,4 @@
-#of-trainings	p1-training-won	#p2-training-won	draw-training	#of-test-games	p1-test-won	p2-test-won	draw-test	best-loss
+#of-trainings	p1-training-won	p2-training-won	draw-training	#of-test-games	p1-test-won	p2-test-won	draw-test	best-loss
 1000	720	186	94	1000	725	160	115	7.1712482051776005
 2000	1271	537	192	1000	457	427	116	6.234583017330547
 3000	1713	965	322	1000	344	569	87	4.909583986994875

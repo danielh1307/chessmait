@@ -1,4 +1,4 @@
-#of-trainings	p1-training-won	#p2-training-won	draw-training	#of-test-games	p1-test-won	p2-test-won	draw-test	q-table-size
+#of-trainings	p1-training-won	p2-training-won	draw-training	#of-test-games	p1-test-won	p2-test-won	draw-test	q-table-size
 1000	732	172	96	1000	766	171	63	1132
 2000	1509	320	171	1000	830	138	32	1362
 3000	2305	478	217	1000	851	125	24	1501
