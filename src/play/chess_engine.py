@@ -1,29 +1,27 @@
-import random
+import sys
 
 import chess
-import torch as tc
 
-import src.board_status as bs
-import src.trained_model as tm
+import play.board_status as bs
+import play.trained_model as tm
 from src.lib.position_validator import get_valid_positions
-from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc, fen_to_bitboard
-from src.lib.utilities import fen_to_tensor_one_board, is_checkmate
+from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc, fen_to_bitboard, is_stalemate, is_checkmate
+from src.lib.utilities import fen_to_tensor_one_board
 
 
 def get_valid_moves_with_evaluation(current_position, trained_model):
     valid_positions = get_valid_positions(current_position)
     dict = {}
     for valid_position in valid_positions:
-        if trained_model.fen_to_tensor == 1:
+        if trained_model.fen_to_tensor == 'fen_to_cnn_tensor_non_hot_enc':
             t = fen_to_cnn_tensor_non_hot_enc(valid_position)
-            t = tc.unsqueeze(t, dim=0)
-        elif trained_model.fen_to_tensor == 2:
+        elif trained_model.fen_to_tensor == 'fen_to_bitboard':
             t = fen_to_bitboard(valid_position)
-            t = tc.unsqueeze(t, dim=0)
-        else:
+        elif trained_model.fen_to_tensor == 'fen_to_tensor_one_board':
             t = fen_to_tensor_one_board(valid_position)
-            t = t.view(-1, t.size(0))
-        normalized_evaluation = trained_model.model(t)
+        else:
+            raise Exception(f'Unknown fen_to_tensor method: {trained_model.fen_to_tensor}')
+        normalized_evaluation = trained_model.model(t.unsqueeze(0))
         evaluation = trained_model.de_normalize(normalized_evaluation)
         evaluation = evaluation.item()
         if evaluation in dict:
@@ -34,18 +32,45 @@ def get_valid_moves_with_evaluation(current_position, trained_model):
 
 
 def get_best_move(current_position, model, is_white):
-    valid_moves_with_evaluation = get_valid_moves_with_evaluation(current_position, model)
-    min_max_eval_key = next(iter(valid_moves_with_evaluation))
-    for k in valid_moves_with_evaluation.keys():
-        for valid_position in valid_moves_with_evaluation[k]:
-            if is_checkmate(valid_position):
-                # if there is a mate within our moves, we return it
-                return k, valid_position
-        if (is_white and k > min_max_eval_key) or (not is_white and k < min_max_eval_key):
-            min_max_eval_key = k
-    index = 0 if len(valid_moves_with_evaluation[min_max_eval_key]) == 1 else random.randrange(
-        len(valid_moves_with_evaluation[min_max_eval_key]) - 1)
-    return min_max_eval_key, valid_moves_with_evaluation[min_max_eval_key][index]
+    valid_positions = get_valid_positions(current_position)
+    valid_position_to_evalution = []
+    for valid_position in valid_positions:
+        if is_checkmate(valid_position):
+            # this is always the best decision
+            evaluation = sys.maxsize if is_white else sys.maxsize * (-1)
+            return evaluation, valid_position
+        elif is_stalemate(valid_position):
+            # this is always the worst decision
+            continue
+        # check the after next moves, these are the moves after valid_position
+        valid_after_moves_with_evaluation = get_valid_moves_with_evaluation(valid_position, model)
+        # if we play white, we want the lowest of the numbers, otherwise the
+        # highest (because our opponent is supposed to make the best move)
+        relevant_evaluation = min(valid_after_moves_with_evaluation.keys()) if is_white else max(
+            valid_after_moves_with_evaluation.keys())
+        valid_position_to_evalution.append((relevant_evaluation, valid_position))
+
+    relevant_tuple = max(valid_position_to_evalution, key=lambda x: x[0]) if is_white else min(
+        valid_position_to_evalution, key=lambda x: x[0])
+    return relevant_tuple
+
+
+def fen_to_move(start_fen, end_fen):
+    board = chess.Board(start_fen)
+    for move in board.legal_moves:
+        board.push(move)
+        if board.fen() == end_fen:
+            return move
+        board.pop()
+    return None
+
+
+def play_return_move(board, model, is_white):
+    fen = board.fen()
+    best_move_eval, best_move_fen = get_best_move(fen, model, is_white)
+    board.set_fen(best_move_fen)
+    move = fen_to_move(fen, best_move_fen)
+    return move.uci()
 
 
 def play(board, model, is_white):

@@ -14,7 +14,7 @@ import random
 import chess.engine
 from collections import deque
 from src.lib.position_validator import get_valid_positions
-from src.board_status import BoardStatus
+from play.board_status import BoardStatus
 
 PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.exe")
 

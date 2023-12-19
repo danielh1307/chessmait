@@ -51,4 +51,7 @@ class BoardStatus:
 
     @staticmethod
     def reason_why_the_game_is_over(board):
-        return str(board.outcome().termination)
+        if board.outcome():
+            return str(board.outcome().termination)
+        else:
+            return "Unknown"
