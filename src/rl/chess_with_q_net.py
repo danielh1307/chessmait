@@ -29,7 +29,7 @@ MAX_MEMORY_SIZE = 10000 # size of the replay memory
 
 POSSIBLE_INDEXES = np.arange(9)
 BOARD_SIZE = 64
-OUT_FEATURES = 2048
+OUT_FEATURES = 4096
 
 
 class QNet(nn.Module):
@@ -38,22 +38,23 @@ class QNet(nn.Module):
         self.layer1 = nn.Sequential(
             nn.Linear(BOARD_SIZE, OUT_FEATURES),
             nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
+
         )
         self.layer2 = nn.Sequential(
             nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
         )
         self.layer3 = nn.Sequential(
             nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
         )
         self.layer4 = nn.Sequential(
             nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
         )
         self.output_layer = nn.Sequential(
             nn.Linear(OUT_FEATURES, BOARD_SIZE),
@@ -68,8 +69,8 @@ class QNet(nn.Module):
         return self.output_layer(x)
 
 
-OPTIMIZER = 1
-LOSS_FUNCTION = 1
+OPTIMIZER = 4
+LOSS_FUNCTION = 2
 
 
 class QNetContext:
@@ -282,7 +283,7 @@ def evaluate_moves(before, after):
         raise Exception("no valid move evaluated overall")
 
 
-def select_action(is_white, model):
+def select_action(is_white, model, is_training):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
     if not is_white:
@@ -293,7 +294,7 @@ def select_action(is_white, model):
         new_board.push(result.move)
         after = board_to_array(new_board)
         return evaluate_moves(before, after)
-    elif random.random() < eps_threshold:
+    elif is_training and random.random() < eps_threshold:
         index = random.randint(0, len(legal_moves_fen)-1)
         after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
@@ -309,6 +310,11 @@ def select_action(is_white, model):
         output[legal_moves_index != 1] = 0
         output[output == 0] = float('-inf')
         move_to = output.argmax().item()
+        # take the second-highest value to add a bit of randomness, otherwise the same moves will always be played
+        if random.randint(0, 1) == 0:
+            output[move_to] = float('-inf')
+            move_to = output.argmax().item()
+
         for move in move_list:
             if move[1][0].item() == move_to:
                 return move[0], move[1], move[2], move[3]
@@ -345,11 +351,39 @@ def play(action_from, action_to):
 
 
 def white_is_winner(reason):
-    return reason != "Termination.FIVEFOLD_REPETITION" and reason != "Termination.STALEMATE"
+    return reason != "Termination.FIVEFOLD_REPETITION" \
+        and reason != "Termination.STALEMATE" \
+        and reason != "Termination.INSUFFICIENT_MATERIAL"
 
 
 def black_is_winner(reason):
     return reason == "Termination.INSUFFICIENT_MATERIAL"
+
+
+def write_replay_memory(state_table, replay_memory, rounds_training):
+    reward = state_table[0][2]
+    decrease_reward = 0.01 if reward > 0 else -0.01
+    if reward == NO_REWARD:
+        reward = -0.01 * rounds_training
+    for state in state_table:
+        replay_memory.store([state[0], state[1], reward, state[3], state[4]])
+        reward -= decrease_reward
+
+
+best_loss = float('inf')
+
+
+def update_q_net():
+    global best_loss
+    loss = q_net.optimize(replay_memory)
+    if loss is not None and loss < best_loss:
+        best_loss = loss
+        # Soft update of the target network's weights
+        target_net_state_dict = q_net.target_net.state_dict()
+        policy_net_state_dict = q_net.policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
+        q_net.target_net.load_state_dict(target_net_state_dict)
 
 
 letters = ['a','b','c','d','e','f','g','h']
@@ -357,7 +391,7 @@ letters = ['a','b','c','d','e','f','g','h']
 SHOW_BOARD = False
 MAX_ROUNDS = 50
 EPISODES_TEST = 1000
-EPISODES_TRAIN = 10000
+EPISODES_TRAIN = 100000
 
 reasons = []
 
@@ -377,8 +411,6 @@ if __name__ == "__main__":
 
     replay_memory = ReplayMemory(max_length=MAX_MEMORY_SIZE)
 
-    best_loss = float('inf')
-
     # Keep track of steps since model and target model were updated
     steps_since_model_update = 0
 
@@ -391,71 +423,45 @@ if __name__ == "__main__":
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
         rounds_training = 0
         winner_name = "draw"
-        global_reward = 0.0
+        state_table = deque()
 
         while not board.is_game_over() and rounds_training < MAX_ROUNDS:
-            global_reward -= rounds_training * 0.0001
-            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, q_net.policy_net)
+            action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, q_net.policy_net, True)
             action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
             state_table_before = board_to_array(board)
             play_and_print("white", action_from_str, action_to_str)
             state_table_after = board_to_array(board)
 
             if board.is_game_over():
-                if reward_after_white_move == NO_REWARD:
-                    reward = global_reward
-                else:
-                    reward = reward_after_white_move
-                if SHOW_BOARD:
-                    print(f"reward: {reward}, promotion: {promotion}")
-                replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
+                state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, True])
                 reason = board_status.reason_why_the_game_is_over(board)
                 if reason not in reasons:
                     reasons.append(reason)
                 if white_is_winner(reason):
                     winner_name = "white"
             else:
-                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, q_net.policy_net)
+                action_from_black, action_to_black, promotion, reward_after_black_move = select_action(False, q_net.policy_net, True)
                 action_from_str, action_to_str = get_actions(action_from_black, action_to_black, promotion)
                 play_and_print("black", action_from_str, action_to_str)
                 if board.is_game_over():
                     reason = board_status.reason_why_the_game_is_over(board)
-                    if reward_after_black_move == NO_REWARD:
-                        reward = global_reward
-                    else:
-                        reward = reward_after_black_move
-                    if SHOW_BOARD:
-                        print(f"reward: {reward}")
-                    replay_memory.store([state_table_before, action_to_white, reward, state_table_after, True])
+                    state_table.appendleft([state_table_before, action_to_white, reward_after_black_move, state_table_after, True])
                     if reason not in reasons:
                         reasons.append(reason)
                     if black_is_winner(reason):
                         winner_name = "black"
                 else:
-                    if reward_after_white_move == NO_REWARD and reward_after_black_move == NO_REWARD:
-                        reward = global_reward
-                    else:
-                        reward = reward_after_white_move
-                    if SHOW_BOARD:
-                        print(f"reward: {reward}, promotion: {promotion}")
-                    replay_memory.store([state_table_before, action_to_white, reward, state_table_after, False])
+                    state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
 
             rounds_training += 1
             steps_since_model_update += 1
 
+        write_replay_memory(state_table, replay_memory, rounds_training)
         rounds_training_total += rounds_training
 
         if steps_since_model_update >= 10:
-            loss = q_net.optimize(replay_memory)
+            update_q_net()
             steps_since_model_update = 0
-            if loss is not None and loss < best_loss:
-                best_loss = loss
-                # Soft update of the target network's weights
-                target_net_state_dict = q_net.target_net.state_dict()
-                policy_net_state_dict = q_net.policy_net.state_dict()
-                for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
-                q_net.target_net.load_state_dict(target_net_state_dict)
 
         eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * rounds_training_total / EPS_DECAY)
         games_training[winner_name] += 1
@@ -488,7 +494,7 @@ if __name__ == "__main__":
                 winner_name = "draw"
 
                 while not board.is_game_over() and rounds_test < MAX_ROUNDS:
-                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, model)
+                    action_from_white, action_to_white, promotion, reward_after_white_move = select_action(True, model, False)
                     action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                     play(action_from_str, action_to_str)
 
@@ -499,7 +505,7 @@ if __name__ == "__main__":
                         if white_is_winner(reason):
                             winner_name = "white"
                     else:
-                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False, model)
+                        action_from_white, action_to_white, promotion, reward_after_white_move = select_action(False, model, False)
                         action_from_str, action_to_str = get_actions(action_from_white, action_to_white, promotion)
                         play(action_from_str, action_to_str)
                         if board.is_game_over():
