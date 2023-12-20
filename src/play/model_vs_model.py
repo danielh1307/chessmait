@@ -19,13 +19,14 @@ starting_positions = [
 ]
 
 all_moves = []
+all_fen = []
 
 
 def run():
     board_status = bs.BoardStatus()
 
     # set one to None to let Stockfish play
-    model_white = tm.model_fresh_blaze_174
+    model_white = tm.model_wild_snow_28
     model_black = tm.model_apricot_armadillo_167
 
     start = timer()
@@ -45,6 +46,9 @@ def run():
                 max_score_reached = False
                 board = chess.Board()
                 board.set_fen(start_position_fen)
+                all_moves.clear()
+                all_fen.clear()
+                all_fen.append(start_position_fen)
                 one_round = False
                 stop = False
 
@@ -83,17 +87,24 @@ def run():
                         elif console_input == 'n':
                             automatic = True
                             no_display = True
-                    if not max_score_reached and (score > 1000 or score < -1000):
+                    max_reached_now = type(score) != int or score > 1000 or score < -1000
+                    if not max_score_reached and max_reached_now:
                         max_score_reached = True
                         print(f"Score {score} is reached")
-                        if score > 1000:
-                            wins['+1000'] += 1
+                        if type(score) == int:
+                            if score > 1000:
+                                wins['+1000'] += 1
+                            else:
+                                wins['-1000'] += 1
                         else:
-                            wins['-1000'] += 1
+                            if score.mate() > 0:
+                                wins['+1000'] += 1
+                            else:
+                                wins['-1000'] += 1
                     if board.is_game_over(claim_draw=True):
                         reason = board_status.reason_why_the_game_is_over(board)
                         if reason == "Termination.CHECKMATE":
-                            wins[white_to_move] += 1
+                            wins[not white_to_move] += 1
                         else:
                             wins['Draw'] += 1
                         print("--------------------------------------------")
@@ -121,8 +132,9 @@ def run():
 
 def play(board, model_to_play, is_white):
     # Model to move
-    _eval_model, _ = ce.get_best_move(board.fen(), model_to_play, is_white)
-    all_moves.append(ce.play_return_move(board, model_to_play, is_white))
+    move, fen = ce.play_return_move(board, model_to_play, is_white, all_fen)
+    all_fen.append(fen)
+    all_moves.append(move)
 
 
 if __name__ == "__main__":

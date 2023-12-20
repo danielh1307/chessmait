@@ -31,9 +31,16 @@ def get_valid_moves_with_evaluation(current_position, trained_model):
     return dict
 
 
-def get_best_move(current_position, model, is_white):
+def get_best_move(current_position, model, is_white, last_fen=None):
     valid_positions = get_valid_positions(current_position)
     valid_position_to_evalution = []
+
+    # check if we have direct move repetitions
+    repeated_move = None
+    if last_fen is not None and len(last_fen) >= 5:
+        if current_position.split(maxsplit=1)[0] == last_fen[-5].split(maxsplit=1)[0]:
+            repeated_move = last_fen[-4].split(maxsplit=1)[0]
+
     for valid_position in valid_positions:
         if is_checkmate(valid_position):
             # this is always the best decision
@@ -48,7 +55,14 @@ def get_best_move(current_position, model, is_white):
         # highest (because our opponent is supposed to make the best move)
         relevant_evaluation = min(valid_after_moves_with_evaluation.keys()) if is_white else max(
             valid_after_moves_with_evaluation.keys())
-        valid_position_to_evalution.append((relevant_evaluation, valid_position))
+
+        if valid_position.split(maxsplit=1)[0] == repeated_move:
+            # if there is a move repetition, we evaluate it with 0
+            # that means we favor every move that is positively ranked
+            # if all moves are negative for us, we do the move repetition
+            valid_position_to_evalution.append((0, valid_position))
+        else:
+            valid_position_to_evalution.append((relevant_evaluation, valid_position))
 
     relevant_tuple = max(valid_position_to_evalution, key=lambda x: x[0]) if is_white else min(
         valid_position_to_evalution, key=lambda x: x[0])
@@ -65,12 +79,12 @@ def fen_to_move(start_fen, end_fen):
     return None
 
 
-def play_return_move(board, model, is_white):
+def play_return_move(board, model, is_white, last_fen=None):
     fen = board.fen()
-    best_move_eval, best_move_fen = get_best_move(fen, model, is_white)
+    best_move_eval, best_move_fen = get_best_move(fen, model, is_white, last_fen)
     board.set_fen(best_move_fen)
     move = fen_to_move(fen, best_move_fen)
-    return move.uci()
+    return move.uci(), best_move_fen
 
 
 def play(board, model, is_white):
