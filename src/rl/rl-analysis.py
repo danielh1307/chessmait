@@ -55,7 +55,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
     axes.legend(borderpad=1, labelspacing=1, prop={'size': 12}, loc='center right')
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
 
     plt.savefig(title + '.png', bbox_inches='tight')
 
@@ -94,7 +94,7 @@ def draw_optimizer_loss_function_statistics():
     plt.title("Comparison of losses for different optimizer and loss-functions", fontsize=20)
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
 
     plt.savefig('optimizer-vs-loss-function.png', bbox_inches='tight')
 
