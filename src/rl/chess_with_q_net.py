@@ -39,7 +39,6 @@ class QNet(nn.Module):
             nn.Linear(BOARD_SIZE, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.3)
-
         )
         self.layer2 = nn.Sequential(
             nn.Linear(OUT_FEATURES, OUT_FEATURES),
@@ -47,11 +46,6 @@ class QNet(nn.Module):
             nn.Dropout(0.3)
         )
         self.layer3 = nn.Sequential(
-            nn.Linear(OUT_FEATURES, OUT_FEATURES),
-            nn.ReLU(),
-            nn.Dropout(0.3)
-        )
-        self.layer4 = nn.Sequential(
             nn.Linear(OUT_FEATURES, OUT_FEATURES),
             nn.ReLU(),
             nn.Dropout(0.3)
@@ -65,7 +59,6 @@ class QNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
         return self.output_layer(x)
 
 
