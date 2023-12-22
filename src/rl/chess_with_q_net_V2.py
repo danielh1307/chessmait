@@ -13,10 +13,10 @@ import copy
 import chess.engine
 from collections import deque
 import src.rl.chess_with_q_net_utilities as utils
+import src.lib.position_validator as pv
 
-
-OPTIMIZER = 4
-LOSS_FUNCTION = 2
+BATCH_SIZE = 8
+MAX_MEMORY_SIZE = 1000
 
 
 class QNetContext:
@@ -28,87 +28,68 @@ class QNetContext:
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net = self.target_net.eval()
 
-        self.optimizer1 = optim.SGD(self.policy_net.parameters(), lr=utils.LR)
-        self.optimizer2 = optim.Adagrad(self.policy_net.parameters(), lr=utils.LR)
-        self.optimizer3 = optim.Adam(self.policy_net.parameters(), lr=utils.LR)
-        self.optimizer4 = optim.AdamW(self.policy_net.parameters(), lr=utils.LR, amsgrad=True)
-
-        self.loss_function1 = nn.MSELoss()
-        self.loss_function2 = nn.HuberLoss()
-        self.loss_function3 = nn.SmoothL1Loss()
+        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=utils.LR, amsgrad=True)
+        self.loss_function = nn.HuberLoss()
+        self.board = chess.Board()
 
     def optimize(self, replay_memory):
-        if len(replay_memory) < utils.BATCH_SIZE:
+        if len(replay_memory) < BATCH_SIZE:
             return
 
-        mini_batch = replay_memory.structured_sample(utils.BATCH_SIZE) # get samples from the replay memory
+        mini_batch = replay_memory.structured_sample(BATCH_SIZE) # get samples from the replay memory
 
-        # Get the Q values for the initial states of the trajectories from the model
-        initial_states = np.array([batch[0] for batch in mini_batch])
-        initial_qs = self.policy_net(torch.tensor(initial_states, device=self.device, dtype=torch.double))
+        sum_loss = 0.0
+        counter = 0
+        print("batch:", end='')
+        for batch in mini_batch:
+            counter += 1
+            print(f' {counter}', end='')
+            state_history = batch[0]
+            reward = batch[1]
+            state_next_fen, action_next = state_history[0]
+            sum_loss += self.backpropagate(state_next_fen, action_next, reward)
 
-        # Get the "target" Q values for the next states
-        next_states = np.array([batch[3] for batch in mini_batch])
-        target_qs = self.target_net(torch.tensor(next_states, device=self.device, dtype=torch.double))
+            for state_fen, action_next in list(state_history)[1:]:
+                with torch.no_grad():
+                    self.board.set_fen(state_next_fen)
+                    next_q_values = utils.get_q_values(self.board, self.target_net)
+                    q_value_max = torch.max(next_q_values).item()
+                sum_loss += self.backpropagate(state_fen, action_next, q_value_max * utils.GAMMA)
+                state_next_fen = state_fen
 
-        states = np.empty([len(mini_batch), utils.BOARD_SIZE])
-        updated_qs = torch.empty((len(mini_batch), utils.BOARD_SIZE), device=self.device, dtype=torch.double)
+        print()
+        return sum_loss
 
-        for index, (observation, action, reward, new_observation, done) in enumerate(mini_batch):
-            if not done:
-                # If not terminal, include the next state
-                max_future_q = reward + utils.GAMMA * torch.max(target_qs[index]).item()
-            else:
-                # If terminal, only include the immediate reward
-                max_future_q = reward
+    def backpropagate(self, state_fen, action, reward):
+        self.board.set_fen(state_fen)
+        state_before = utils.board_to_array(self.board)
 
-            # The Qs for this sample of the mini batch
-            updated_qs_sample = initial_qs[index].clone().detach()
-            # Update the value for the taken action
-            action_to = action[0].item()
-            updated_qs_sample[action_to] = max_future_q
+        self.optimizer.zero_grad()
+        output = self.policy_net(torch.tensor(state_before, device=self.device, dtype=torch.double))
 
-            # Keep track of the observation and updated Q value
-            states[index] = observation
-            updated_qs[index] = updated_qs_sample
+        target = output.clone().detach()
+        target[action] = reward
 
-        predicted_qs = self.policy_net(torch.tensor(states, device=self.device, dtype=torch.double))
-        if LOSS_FUNCTION == 2:
-            loss_function = self.loss_function2
-        elif LOSS_FUNCTION == 3:
-            loss_function = self.loss_function3
-        else:
-            loss_function = self.loss_function1
+        valid_positions = pv.get_valid_positions(state_fen)
+        legal_actions = np.zeros(utils.BOARD_SIZE)
+        for position in valid_positions:
+            self.board.set_fen(position)
+            state_after = utils.board_to_array(self.board)
+            _, action_to, _, _ = utils.evaluate_moves(state_before, state_after)
+            legal_actions[action_to] = 1.0
 
-        if OPTIMIZER == 2:
-            optimizer = self.optimizer2
-        elif OPTIMIZER == 3:
-            optimizer = self.optimizer3
-        elif OPTIMIZER == 4:
-            optimizer = self.optimizer4
-        else:
-            optimizer = self.optimizer1
+        illegal_actions = [i for i in range(len(legal_actions)) if legal_actions[i] == 0]
+        for a in illegal_actions:
+            target[a] = 0.0
 
-        loss = loss_function(predicted_qs, updated_qs)
-        optimizer.zero_grad()
+        loss = self.loss_function(output, target)
         loss.backward()
-        torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
-        optimizer.step()
-        return loss
-
-def write_replay_memory(state_table, replay_memory, rounds_training):
-    reward = state_table[0][2]
-    decrease_reward = 0.01 if reward > 0 else -0.01
-    if reward == utils.NO_REWARD:
-        reward = -0.01 * rounds_training
-    for state in state_table:
-        replay_memory.store([state[0], state[1], reward, state[3], state[4]])
-        reward -= decrease_reward
-
+        self.optimizer.step()
+        return loss.item()
 
 MAX_ROUNDS = 50
-EPISODES_TEST = 1000
-EPISODES_TRAIN = 100000
+EPISODES_TEST = 100
+EPISODES_TRAIN = 1000
 
 if __name__ == "__main__":
 
@@ -123,7 +104,7 @@ if __name__ == "__main__":
 
     best_loss = float('inf')
 
-    file_name = os.path.join("src", "rl", "chess-statistics-q-net.csv")
+    file_name = os.path.join("src", "rl", "chess-statistics-q-net-V2.csv")
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
@@ -133,9 +114,10 @@ if __name__ == "__main__":
 
     print("RL training start ***")
 
-    replay_memory = utils.ReplayMemory(max_length=utils.MAX_MEMORY_SIZE)
+    replay_memory = utils.ReplayMemory(max_length=MAX_MEMORY_SIZE)
 
     # Keep track of steps since model and target model were updated
+    steps_since_model_optimize = 0
     steps_since_model_update = 0
 
     start_episode = time.time()
@@ -152,12 +134,11 @@ if __name__ == "__main__":
         while not board.is_game_over() and rounds_training < MAX_ROUNDS:
             action_from_white, action_to_white, promotion, reward_after_white_move = utils.select_action(env, board, eps_threshold,True, q_net.policy_net, True)
             action_from_str, action_to_str = utils.get_actions(action_from_white, action_to_white, promotion)
-            state_table_before = utils.board_to_array(board)
+            state_table.appendleft([board.fen(), action_to_white])
             utils.play_and_print(board, rounds_training, "white", action_from_str, action_to_str)
-            state_table_after = utils.board_to_array(board)
 
             if board.is_game_over():
-                state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, True])
+                replay_memory.store([state_table, reward_after_white_move])
                 reason = utils.board_status.reason_why_the_game_is_over(board)
                 if reason not in reasons:
                     reasons.append(reason)
@@ -168,26 +149,27 @@ if __name__ == "__main__":
                 action_from_str, action_to_str = utils.get_actions(action_from_black, action_to_black, promotion)
                 utils.play_and_print(board, rounds_training, "black", action_from_str, action_to_str)
                 if board.is_game_over():
+                    replay_memory.store([state_table, reward_after_black_move])
                     reason = utils.board_status.reason_why_the_game_is_over(board)
-                    state_table.appendleft([state_table_before, action_to_white, reward_after_black_move, state_table_after, True])
                     if reason not in reasons:
                         reasons.append(reason)
                     if utils.black_is_winner(reason):
                         winner_name = "black"
-                else:
-                    state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
 
             rounds_training += 1
+            steps_since_model_optimize += 1
             steps_since_model_update += 1
 
-        write_replay_memory(state_table, replay_memory, rounds_training)
         rounds_training_total += rounds_training
 
-        if steps_since_model_update >= 10:
+        if steps_since_model_optimize >= 5:
             loss = q_net.optimize(replay_memory)
             if loss is not None and loss < best_loss:
                 best_loss = loss
-                q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
+            steps_since_model_optimize = 0
+
+        if steps_since_model_update >= 100:
+            q_net.target_net.load_state_dict(q_net.policy_net.state_dict())
             steps_since_model_update = 0
 
         eps_threshold = utils.EPS_END + (utils.EPS_START - utils.EPS_END) * math.exp(-1. * rounds_training_total / utils.EPS_DECAY)

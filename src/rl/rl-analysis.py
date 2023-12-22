@@ -31,7 +31,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
 
     if best_loss_scaler is not None:
         if chess:
-            axes2.set_ylim([-0.0002, 0.0022])
+            axes2.set_ylim([-0.002, 0.01])
         else:
             axes2.set_ylim([-1, 11])
 
@@ -101,5 +101,5 @@ def draw_optimizer_loss_function_statistics():
 
 draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False)
 draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False)
-draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 500000, True)
+draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 150000, True)
 draw_optimizer_loss_function_statistics()
