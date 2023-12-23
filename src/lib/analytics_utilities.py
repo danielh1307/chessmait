@@ -40,7 +40,7 @@ def evaluation_to_class(CLASSES, evaluation):
 def remove_mates(df: pd.DataFrame, column):
     if df[column].dtype == 'object':
         df = df[~df[column].str.startswith('#')]
-        df.loc[:, column] = df[column].astype(int)
+        df = df.astype({'Evaluation': int})
     return df
 
 
