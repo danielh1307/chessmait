@@ -12,10 +12,12 @@ NUMBER_OF_GAMES_PER_POSITION = 1
 
 starting_positions = [
     ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Initial position"),
-    ("rnbqkbnr/pppp1ppp/8/8/4Pp2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3", "King's Gambit accepted"),
-    ("r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", "Spanish opening"),
-    ("rnbqkbnr/pp1ppppp/8/8/3pP3/2P5/PP3PPP/RNBQKBNR b KQkq - 0 3", "Smith Morra Gambit"),
-    ("r1bqk1nr/pppp1ppp/2n5/2b1p3/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4", "Evan's Gambit")
+    ("rnbqkbnr/pppp1ppp/8/8/4Pp2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3", "King's Gambit accepted (~-0.3)"),
+    ("rnbqkbnr/pp1ppppp/8/8/3pP3/2P5/PP3PPP/RNBQKBNR b KQkq - 0 3", "Smith Morra Gambit (~-0.2"),
+    ("r1bqk1nr/pppp1ppp/2n5/2b1p3/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4", "Evan's Gambit (~-0.3)"),
+    ("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1", "King and pawn vs. King, win for white"),
+    ("r1bqkbnr/pppp1ppp/8/4p3/2BnP3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", "Blackburne Shilling Gambit (~+1.1)"),
+    ("r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5", "Traxler Counterattack (~+0.9)")
 ]
 
 all_moves = []
