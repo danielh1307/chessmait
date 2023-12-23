@@ -8,9 +8,8 @@ import wandb
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 
-from src.CustomWeightedMSELoss import CustomWeightedMSELoss
+from loss.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
-from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.lib.utilities import get_device
 from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 
@@ -65,7 +64,6 @@ PICKLE_FILES = ["01_with_mate_bitboard.pkl", "02_with_mate_bitboard.pkl", "03_wi
 DATA_FILES = []
 
 WANDB_REPORTING = True
-REGRESSION_TRAINING = True
 FEN_TO_TENSOR_METHOD = "fen_to_bitboard"  # just for documentation
 
 # Model, loss function, optimizer
@@ -101,12 +99,9 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     for data_file in PICKLE_FILES:
         pickle_files.append(os.path.join(PATH_TO_PICKLEFILE, data_file))
 
-    if REGRESSION_TRAINING:
-        dataset = PositionToEvaluationDataset(csv_files, pickle_files)
-        _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
-        print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
-    else:
-        dataset = PositionToEvaluationDatasetClassification(csv_files, pickle_files)
+    dataset = PositionToEvaluationDataset(csv_files, pickle_files)
+    _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
+    print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
 
     torch.manual_seed(42)
 
@@ -130,7 +125,7 @@ def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
                 _optimizer: Union[torch.optim.Adam, torch.optim.SGD],
                 _scheduler,
-                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
+                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, nn.HuberLoss, CustomWeightedMSELoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader,
                 _device: str,
@@ -155,9 +150,7 @@ def train_model(_config: argparse.Namespace,
             batch_number += 1
             _optimizer.zero_grad()
             predicted_evaluation = _model(position.to(_device))
-
-            if REGRESSION_TRAINING:
-                evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
+            evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
             loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
@@ -169,9 +162,7 @@ def train_model(_config: argparse.Namespace,
         with torch.no_grad():
             for position, evaluation in _val_loader:
                 predicted_evaluation = _model(position.to(_device))
-
-                if REGRESSION_TRAINING:
-                    evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
+                evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
                 loss = _loss_function(predicted_evaluation, evaluation.to(_device))
                 val_loss += loss.item() * position.size(0)
 
@@ -202,10 +193,6 @@ def train_model(_config: argparse.Namespace,
 if __name__ == "__main__":
     print("Starting training process ...")
     print(f"WANDB_REPORTING for this training is set to {WANDB_REPORTING} ...")
-    if REGRESSION_TRAINING:
-        print("Training on a regression problem ...")
-    else:
-        print("Training on a classification problem ...")
 
     print("Training on files " + str(DATA_FILES))
 
@@ -213,12 +200,13 @@ if __name__ == "__main__":
 
     train_loader, val_loader = get_dataloaders(config)
 
-    model_name = "best_model.pth"
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
         wand_return = wandb.init(project="chessmait", config=vars(config))
         model_name = wand_return.name + ".pth"
+    else:
+        model_name = "best_model.pth"
 
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model

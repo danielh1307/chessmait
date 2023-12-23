@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 
 from src.lib.analytics_utilities import count_pieces
-from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.fen_to_tensor import fen_to_tensor_one_board
 from src.lib.utilities import get_device
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 

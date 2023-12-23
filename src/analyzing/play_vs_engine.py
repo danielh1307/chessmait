@@ -4,7 +4,7 @@ import sys
 import chess
 import torch
 
-from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.fen_to_tensor import fen_to_tensor_one_board
 from src.lib.utilities import get_device, is_checkmate, is_stalemate
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 

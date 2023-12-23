@@ -4,9 +4,8 @@ import chess
 
 import play.board_status as bs
 import play.trained_model as tm
-from src.lib.position_validator import get_valid_positions
-from src.lib.utilities import fen_to_cnn_tensor_non_hot_enc, fen_to_bitboard, is_stalemate, is_checkmate
-from src.lib.utilities import fen_to_tensor_one_board
+from src.lib.fen_to_tensor import fen_to_tensor_one_board, fen_to_cnn_tensor_non_hot_enc, fen_to_bitboard
+from src.lib.utilities import is_stalemate, is_checkmate, get_valid_positions
 
 
 def get_valid_moves_with_evaluation(current_position, trained_model):

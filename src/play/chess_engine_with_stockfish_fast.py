@@ -13,7 +13,7 @@ def run():
     board_status = bs.BoardStatus()
 
     # model_white = tm.model_smart_valley_6
-    own_model = tm.model_upbeat_cloud_79
+    own_model = tm.model_apricot_armadillo_167
 
     start = timer()
     no_display = False

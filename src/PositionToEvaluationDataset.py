@@ -2,7 +2,8 @@ import torch
 from torch.utils.data import Dataset
 
 from src.lib.analytics_utilities import remove_mates
-from src.lib.utilities import fen_to_bitboard, dataframe_from_files
+from src.lib.utilities import dataframe_from_files
+from src.lib.fen_to_tensor import fen_to_bitboard
 
 USE_NORMALIZATION = False
 USE_CLIPPING = False
@@ -47,6 +48,7 @@ class PositionToEvaluationDataset(Dataset):
         self.max_score = self.data["Evaluation"].max()
 
         if USE_NORMALIZATION:
+            # Normalize the evaluation in the range of [0, 1]
             print("Normalizing the evaluation ...")
             self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
