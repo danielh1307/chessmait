@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader, random_split
 
 from loss.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
-from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.lib.utilities import get_device
 from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 
@@ -65,7 +64,6 @@ PICKLE_FILES = ["01_with_mate_bitboard.pkl", "02_with_mate_bitboard.pkl", "03_wi
 DATA_FILES = []
 
 WANDB_REPORTING = True
-REGRESSION_TRAINING = True
 FEN_TO_TENSOR_METHOD = "fen_to_bitboard"  # just for documentation
 
 # Model, loss function, optimizer
@@ -101,12 +99,9 @@ def get_dataloaders(_config: argparse.Namespace) -> (DataLoader, DataLoader, Dat
     for data_file in PICKLE_FILES:
         pickle_files.append(os.path.join(PATH_TO_PICKLEFILE, data_file))
 
-    if REGRESSION_TRAINING:
-        dataset = PositionToEvaluationDataset(csv_files, pickle_files)
-        _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
-        print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
-    else:
-        dataset = PositionToEvaluationDatasetClassification(csv_files, pickle_files)
+    dataset = PositionToEvaluationDataset(csv_files, pickle_files)
+    _config.min_evaluation, _config.max_evaluation = dataset.get_min_max_score()
+    print(f"Min score is {_config.min_evaluation} and max score is {_config.max_evaluation}")
 
     torch.manual_seed(42)
 
