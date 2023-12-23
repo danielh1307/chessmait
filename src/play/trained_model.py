@@ -34,6 +34,12 @@ class TrainedModel:
 
 
 device = get_device()
+
+# trained on 4.1 million positions (no mate positions)
+# batch size 1024
+model_firm_star_24 = TrainedModel("firm-star-24.pth", ChessmaitMlp1(), 'fen_to_tensor_one_board', device,
+                                  use_normalization=True, max_evaluation=12352, min_evaluation=-12349)
+
 # trained on 8.6 million positions (no mate positions)
 # batch size 1024
 model_wild_snow_28 = TrainedModel("wild-snow-28.pth", ChessmaitMlp1(), 'fen_to_tensor_one_board', device,
@@ -58,6 +64,14 @@ model_honest_dragon_72 = TrainedModel("honest-dragon-72.pth", ChessmaitCnn2NonHo
 # batch size 1024
 model_upbeat_cloud_79 = TrainedModel("upbeat-cloud-79.pth", ChessmaitMlp5(), 'fen_to_tensor_one_board', device)
 
+# trained on 5.2 million positions (no mate positions)
+# batch size 1024
+model_lemon_plasma_103 = TrainedModel("lemon-plasma-103.pth", ChessmaitMlp5(), 'fen_to_tensor_one_board', device)
+
+# trained on 7.0 million positions (no mate positions)
+# batch size 1024
+model_stellar_sound_105 = TrainedModel("stellar-sound-105.pth", ChessmaitMlp5(), 'fen_to_tensor_one_board', device)
+
 ####################
 # models for contest
 ####################
@@ -66,19 +80,6 @@ model_upbeat_cloud_79 = TrainedModel("upbeat-cloud-79.pth", ChessmaitMlp5(), 'fe
 # batch size 512
 model_smart_valley_6 = TrainedModel("smart-valley-6.pth", ChessmaitMlp1(), 'fen_to_tensor_one_board', device,
                                     use_normalization=True, max_evaluation=20000, min_evaluation=-20000)
-
-# trained on 4.1 million positions (no mate positions)
-# batch size 1024
-model_firm_star_24 = TrainedModel("firm-star-24.pth", ChessmaitMlp1(), 'fen_to_tensor_one_board', device,
-                                  use_normalization=True, max_evaluation=12352, min_evaluation=-12349)
-
-# trained on 5.2 million positions (no mate positions)
-# batch size 1024
-model_lemon_plasma_103 = TrainedModel("lemon-plasma-103.pth", ChessmaitMlp5(), 'fen_to_tensor_one_board', device)
-
-# trained on 7.0 million positions (no mate positions)
-# batch size 1024
-model_stellar_sound_105 = TrainedModel("stellar-sound-105.pth", ChessmaitMlp5(), 'fen_to_tensor_one_board', device)
 
 # trained on 5.2 million positions (no mate positions)
 # batch size 256
