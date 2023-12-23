@@ -125,7 +125,7 @@ def train_model(_config: argparse.Namespace,
                 _model: nn.Module,
                 _optimizer: Union[torch.optim.Adam, torch.optim.SGD],
                 _scheduler,
-                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, CustomWeightedMSELoss],
+                _loss_function: Union[nn.CrossEntropyLoss, nn.MSELoss, nn.HuberLoss, CustomWeightedMSELoss],
                 _train_loader: DataLoader,
                 _val_loader: DataLoader,
                 _device: str,
@@ -150,9 +150,7 @@ def train_model(_config: argparse.Namespace,
             batch_number += 1
             _optimizer.zero_grad()
             predicted_evaluation = _model(position.to(_device))
-
-            if REGRESSION_TRAINING:
-                evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
+            evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
             loss = _loss_function(predicted_evaluation, evaluation.to(_device))
             loss.backward()
             _optimizer.step()
@@ -164,9 +162,7 @@ def train_model(_config: argparse.Namespace,
         with torch.no_grad():
             for position, evaluation in _val_loader:
                 predicted_evaluation = _model(position.to(_device))
-
-                if REGRESSION_TRAINING:
-                    evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
+                evaluation = evaluation.unsqueeze(1)  # Reshapes to match the predicted_evaluation
                 loss = _loss_function(predicted_evaluation, evaluation.to(_device))
                 val_loss += loss.item() * position.size(0)
 
@@ -197,10 +193,6 @@ def train_model(_config: argparse.Namespace,
 if __name__ == "__main__":
     print("Starting training process ...")
     print(f"WANDB_REPORTING for this training is set to {WANDB_REPORTING} ...")
-    if REGRESSION_TRAINING:
-        print("Training on a regression problem ...")
-    else:
-        print("Training on a classification problem ...")
 
     print("Training on files " + str(DATA_FILES))
 
@@ -208,12 +200,13 @@ if __name__ == "__main__":
 
     train_loader, val_loader = get_dataloaders(config)
 
-    model_name = "best_model.pth"
     if WANDB_REPORTING:
         config.model = type(model).__name__
         config.loss_function = type(loss_function).__name__
         wand_return = wandb.init(project="chessmait", config=vars(config))
         model_name = wand_return.name + ".pth"
+    else:
+        model_name = "best_model.pth"
 
     # adding a scheduler to reduce the learning_rate as soon as the validation loss stops decreasing,
     # this is to try to prevent overfitting of the model
