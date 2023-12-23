@@ -37,7 +37,6 @@ NO_PROMOTION = 0
 NO_REWARD = 0
 WIN_REWARD = 1
 LOST_REWARD = -1
-HALF_REWARD = 0.5
 
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 board_status = BoardStatus()
@@ -139,13 +138,13 @@ def evaluate_moves(before, after):
         if WHITE_PAWN in after:
             return np.where(after == -WHITE_PAWN), np.where(after == WHITE_PAWN), NO_PROMOTION, NO_REWARD
         elif WHITE_KNIGHT in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_KNIGHT), WHITE_KNIGHT, HALF_REWARD # convert pawn to knight
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_KNIGHT), WHITE_KNIGHT, WIN_REWARD # convert pawn to knight
         elif WHITE_BISHOP in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_BISHOP), WHITE_BISHOP, HALF_REWARD # convert pawn to bishop
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_BISHOP), WHITE_BISHOP, WIN_REWARD # convert pawn to bishop
         elif WHITE_ROOK in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_ROOK), WHITE_ROOK, HALF_REWARD # convert pawn to rook
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_ROOK), WHITE_ROOK, WIN_REWARD # convert pawn to rook
         elif WHITE_QUEEN in after:
-            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_QUEEN), WHITE_QUEEN, HALF_REWARD # convert pawn to queen
+            return np.where(after == -WHITE_PAWN), np.where(after == WHITE_QUEEN), WHITE_QUEEN, WIN_REWARD # convert pawn to queen
         elif BLACK_KING - WHITE_PAWN in after:
             return np.where(after == -WHITE_PAWN), np.where(after == BLACK_KING - WHITE_PAWN), NO_PROMOTION, WIN_REWARD # white pawn has taken the black king
         else:
@@ -185,17 +184,16 @@ def evaluate_moves(before, after):
 def select_action(env, board, eps_threshold, is_white, model, is_training):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
-    if is_training and random.random() < eps_threshold:
-        index = random.randint(0, len(legal_moves_fen) - 1)
-        after = board_to_array(chess.Board(legal_moves_fen[index]))
-        return evaluate_moves(before, after)
-    elif not is_white:
-        depth = random.randint(1,5)
-        result = env.play(board, chess.engine.Limit(time=depth / 100, depth=depth))
+    if not is_white:
+        result = env.play(board, chess.engine.Limit(time=0.1, depth=20))
         new_board = chess.Board()
         new_board.set_fen(board.fen())
         new_board.push(result.move)
         after = board_to_array(new_board)
+        return evaluate_moves(before, after)
+    elif is_training and random.random() < eps_threshold:
+        index = random.randint(0, len(legal_moves_fen) - 1)
+        after = board_to_array(chess.Board(legal_moves_fen[index]))
         return evaluate_moves(before, after)
     else:
         output = get_q_values(board, model)
@@ -254,3 +252,7 @@ def white_is_winner(reason):
 
 def black_is_winner(reason):
     return reason == "Termination.INSUFFICIENT_MATERIAL"
+
+
+def is_unsufficient_material(state):
+    return len(state[state != 0]) == 2

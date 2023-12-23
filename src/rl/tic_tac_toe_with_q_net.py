@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    file_name = "tic-tac-toe-statistics-q-net.csv"
+    file_name = "statistics/tic-tac-toe-statistics-q-net.csv"
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
@@ -271,7 +271,7 @@ if __name__ == "__main__":
             with open(file_name, 'a') as f:
                 f.write(f"{episode_training}\t{games_training['player_1']}\t{games_training['player_2']}\t{games_training['draw']}\t1000\t{games_test['player_1']}\t{games_test['player_2']}\t{games_test['draw']}\t{best_loss}\n")
 
-    torch.save(q_net.target_net.state_dict(), "tic-tac-toe.pth")
+    torch.save(q_net.target_net.state_dict(), "model/tic-tac-toe.pth")
 
     print("-----------------------------")
     print("RL training end ***")

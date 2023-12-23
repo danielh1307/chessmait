@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    file_name = "tic-tac-toe-statistics-q-table.csv"
+    file_name = "statistics/tic-tac-toe-statistics-q-table.csv"
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:

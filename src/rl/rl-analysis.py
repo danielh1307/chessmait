@@ -7,7 +7,7 @@ import numpy as np
 
 def draw_dataframe(name, title, best_loss_scaler, chess):
 
-    df = pd.read_csv(name + ".csv", delimiter="\t", header=0)
+    df = pd.read_csv("statistics/" + name + ".csv", delimiter="\t", header=0)
     df.drop(df.tail(1).index, inplace=True)  # drop last row
     df['#of-trainings'] = df['#of-trainings'].astype(np.float64)
     df['p1-training-won-scaled'] = df['p1-training-won'] / df['#of-trainings'] * 1000
@@ -31,7 +31,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
 
     if best_loss_scaler is not None:
         if chess:
-            axes2.set_ylim([-0.002, 0.01])
+            axes2.set_ylim([-0.0001, 0.002])
         else:
             axes2.set_ylim([-1, 11])
 
@@ -62,7 +62,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
 
 def draw_dataset(name, axes, color):
 
-    df = pd.read_csv("chess-statistics-q-net-" + name + ".csv", delimiter="\t", header=0)
+    df = pd.read_csv("statistics/chess-statistics-q-net-" + name + ".csv", delimiter="\t", header=0)
     df.drop(df.tail(1).index, inplace=True)  # drop last row
     df['#of-trainings'] = df['#of-trainings'].astype(np.float64)
     sns.lineplot(data=df, y='best-loss', x='#of-trainings', ax=axes, color=color, lw=3, label=name)
@@ -101,5 +101,5 @@ def draw_optimizer_loss_function_statistics():
 
 draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False)
 draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False)
-draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 150000, True)
+draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 500000, True)
 draw_optimizer_loss_function_statistics()
