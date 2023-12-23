@@ -1,6 +1,5 @@
 import argparse
 import os
-import fnmatch
 from typing import Union
 
 import torch
@@ -10,9 +9,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 
 from src.PositionToEvaluationDatasetConv2d import PositionToEvaluationDatasetConv2d
-from src.model.ChessmaitMlp1 import ChessmaitMlp1
-from src.CustomWeightedMSELoss import CustomWeightedMSELoss
-from src.model.ChessmaitMlp2 import ChessmaitMlp2
+from loss.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.model.ChessmaitCnn1 import ChessmaitCnn1
 
 ############################################################

@@ -8,7 +8,7 @@ import wandb
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 
-from src.CustomWeightedMSELoss import CustomWeightedMSELoss
+from loss.CustomWeightedMSELoss import CustomWeightedMSELoss
 from src.PositionToEvaluationDataset import PositionToEvaluationDataset
 from src.PositionToEvaluationDatasetClassification import PositionToEvaluationDatasetClassification
 from src.lib.utilities import get_device
