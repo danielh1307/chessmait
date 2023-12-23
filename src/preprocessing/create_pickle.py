@@ -3,7 +3,8 @@ import time
 
 import pandas as pd
 
-from src.lib.utilities import fen_to_bitboard, get_files_from_pattern
+from src.lib.utilities import get_files_from_pattern
+from src.lib.fen_to_tensor import fen_to_bitboard
 from src.lib.analytics_utilities import remove_mates
 
 # Helper script to create a pickle dataframe with the tensors

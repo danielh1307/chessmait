@@ -2,7 +2,8 @@ import torch
 from torch.utils.data import Dataset
 
 from src.lib.analytics_utilities import remove_mates
-from src.lib.utilities import fen_to_bitboard, dataframe_from_files
+from src.lib.utilities import dataframe_from_files
+from src.lib.fen_to_tensor import fen_to_bitboard
 
 USE_NORMALIZATION = False
 USE_CLIPPING = False
