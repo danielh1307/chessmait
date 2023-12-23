@@ -47,6 +47,7 @@ class PositionToEvaluationDataset(Dataset):
         self.max_score = self.data["Evaluation"].max()
 
         if USE_NORMALIZATION:
+            # Normalize the evaluation in the range of [0, 1]
             print("Normalizing the evaluation ...")
             self.data["Evaluation"] = (self.data["Evaluation"] - self.min_score) / (self.max_score - self.min_score)
 
