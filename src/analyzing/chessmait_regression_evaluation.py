@@ -11,8 +11,8 @@ import torch
 from sklearn.metrics import confusion_matrix
 
 from src.lib.analytics_utilities import evaluation_to_class, remove_mates, count_pieces
-from src.lib.utilities import fen_to_tensor_one_board, write_values_in_bars
-from src.lib.utilities import get_device
+from src.lib.utilities import write_values_in_bars, get_device
+from src.lib.fen_to_tensor import fen_to_tensor_one_board
 from src.model.ChessmaitMlp5 import ChessmaitMlp5
 
 # Helper script for different actions in the context of regression models.

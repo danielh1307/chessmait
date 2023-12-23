@@ -125,48 +125,15 @@ def is_stalemate(fen) -> bool:
     return board.is_stalemate()
 
 
-def fen_to_tensor(fen):
-    """
-    Converts FEN into a tensor of 12x64 dimensions representing the board.
-
-    Parameters
-    ----------
-    fen String input as FEN
-
-    Returns
-    -------
-    Array size  12 (Figures 6xWHITE, 6xBLACK) 8x8 (board). First 12 values represent the figures.
-    For each color and type, there is an array of 64 fields.
-    Values are 1 for turn -1 for wait.
-
-    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
-
-    Arrays:
-    0:   Pawn, white
-    1:   Knight, white
-    2:   Bishop, white
-    3:   Rook, white
-    5:   Queen, white
-    6:   King, white
-    7:   Pawn, black
-    8:   Knight, black
-    9:   Bishop, black
-    10:  Rook, black
-    11:  Queen, black
-    12:  Knight, black
-    """
-    board = chess.Board()
-    board.set_fen(fen)
-
-    result = torch.zeros((12, 64))
-    for sq in chess.SQUARES:
-        piece_type = board.piece_type_at(sq)
-        if piece_type != 0:  # Not no color
-            if board.color_at(sq) == chess.WHITE:  # white color on layer 1-6
-                piece_layer = piece_type
-            else:  # black color on layer 6-12
-                piece_layer = int(piece_type or 0) + 6
-            piece_layer = piece_layer - 1
-            result[piece_layer, sq] = (-1 if board.color_at(sq) == chess.WHITE else 1) * \
-                                      (-1 if board.turn == chess.WHITE else 1)
-    return result
+def get_valid_positions(current_position):
+    legal_moves_fen = []
+    try:
+        board = chess.Board(current_position)
+        legal_moves = list(board.legal_moves)
+        for move in legal_moves:
+            # reset
+            new_board = chess.Board(current_position)
+            new_board.push_uci(move.uci())
+            legal_moves_fen.append(new_board.fen())
+    finally:
+        return legal_moves_fen

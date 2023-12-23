@@ -13,7 +13,7 @@ import copy
 import chess.engine
 from collections import deque
 import src.rl.chess_with_q_net_utilities as utils
-import src.lib.position_validator as pv
+from src.lib.utilities import get_valid_positions
 
 BATCH_SIZE = 8
 MAX_MEMORY_SIZE = 1000
@@ -70,7 +70,7 @@ class QNetContext:
         target = output.clone().detach()
         target[action] = reward
 
-        valid_positions = pv.get_valid_positions(state_fen)
+        valid_positions = get_valid_positions(state_fen)
         legal_actions = np.zeros(utils.BOARD_SIZE)
         for position in valid_positions:
             self.board.set_fen(position)
