@@ -10,7 +10,7 @@ from src.play.board_status import BoardStatus
 
 PATH_TO_CHESS_ENGINE = os.path.join("stockfish", "stockfish-windows-x86-64-avx2.exe")
 
-BATCH_SIZE = 32 # the number of transitions sampled from the replay buffer
+BATCH_SIZE = 64 # the number of transitions sampled from the replay buffer
 GAMMA = 0.99 # the discount factor as mentioned in the previous section
 EPS_START = 0.9 # the starting value of epsilon
 EPS_END = 0.2 # the final value of epsilon
@@ -216,6 +216,37 @@ def select_action(env, board, eps_threshold, is_white, model, is_training):
             if move[1][0].item() == move_to:
                 return move[0], move[1], move[2], move[3]
         raise Exception("no valid move found")
+
+
+def select_action_q_table(env, board, eps_threshold, is_white, q_table, is_training):
+    legal_moves_fen = get_valid_positions(board.fen())
+    before = board_to_array(board)
+    if not is_white:
+        result = env.play(board, chess.engine.Limit(time=0.1, depth=20))
+        new_board = chess.Board()
+        new_board.set_fen(board.fen())
+        new_board.push(result.move)
+        after = board_to_array(new_board)
+        return evaluate_moves(before, after)
+    elif is_training and random.random() < eps_threshold:
+        index = random.randint(0, len(legal_moves_fen) - 1)
+        after = board_to_array(chess.Board(legal_moves_fen[index]))
+        return evaluate_moves(before, after)
+    else:
+        max_val = float('-inf')
+        next_move_to = []
+        next_move_from = []
+        next_promotion = 0
+        for legal_move in legal_moves_fen:
+            after = board_to_array(chess.Board(legal_move))
+            move_from, move_to, promotion, _ = evaluate_moves(before, after)
+            value = 0 if q_table.get(str(after)) is None else q_table.get(str(after))
+            if value > max_val:
+                max_val = value
+                next_move_to = move_to
+                next_move_from = move_from
+                next_promotion = promotion
+        return next_move_from, next_move_to, next_promotion, 0,0
 
 
 def get_actions(action_from, action_to, promotion_index):

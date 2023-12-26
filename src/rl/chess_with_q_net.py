@@ -96,15 +96,6 @@ class QNetContext:
         optimizer.step()
         return loss
 
-def write_replay_memory(state_table, replay_memory, rounds_training):
-    reward = state_table[0][2]
-    decrease_reward = 0.01 if reward > 0 else -0.01
-    if reward == utils.NO_REWARD:
-        reward = -0.01 * rounds_training
-    for state in state_table:
-        replay_memory.store([state[0], state[1], reward, state[3], state[4]])
-        reward -= decrease_reward
-
 
 EPISODES_TEST = 1000
 EPISODES_TRAIN = 100000
@@ -146,7 +137,6 @@ if __name__ == "__main__":
         board.set_fen("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1")
         rounds_training = 0
         winner_name = "draw"
-        state_table = deque()
 
         insufficient_material = False
 
@@ -159,11 +149,9 @@ if __name__ == "__main__":
             insufficient_material = utils.is_unsufficient_material(state_table_after)
 
             if reward_after_white_move == utils.WIN_REWARD and not board.is_checkmate() and not board.is_stalemate() and not insufficient_material:
-                state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
-                write_replay_memory(state_table, replay_memory, rounds_training)
-                state_table = deque()
+                replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
             if board.is_checkmate() or board.is_stalemate() or insufficient_material:
-                state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, True])
+                replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, True])
                 reason = utils.board_status.reason_why_the_game_is_over(board)
                 if reason not in reasons:
                     reasons.append(reason)
@@ -178,19 +166,18 @@ if __name__ == "__main__":
 
                 if board.is_checkmate() or board.is_stalemate() or insufficient_material:
                     reason = utils.board_status.reason_why_the_game_is_over(board)
-                    state_table.appendleft([state_table_before, action_to_white, reward_after_black_move, state_table_after, True])
+                    replay_memory.store([state_table_before, action_to_white, reward_after_black_move, state_table_after, True])
                     if reason not in reasons:
                         reasons.append(reason)
                     if utils.black_is_winner(reason):
                         winner_name = "black"
                 else:
                     if reward_after_white_move != utils.WIN_REWARD:
-                        state_table.appendleft([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
+                        replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
 
             rounds_training += 1
             steps_since_model_update += 1
 
-        write_replay_memory(state_table, replay_memory, rounds_training)
         rounds_training_total += rounds_training
 
         if steps_since_model_update >= 10:
