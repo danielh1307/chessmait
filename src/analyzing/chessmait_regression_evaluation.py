@@ -211,7 +211,7 @@ def create_statistics(fen_directory_evaluated):
     df["Num_Pieces"] = df["FEN"].apply(lambda x: count_pieces(x))
 
     # Create a figure with two subplots side by side
-    fig, axes = plt.subplots(10, 2, figsize=(36, 24))
+    fig, axes = plt.subplots(10, 2, figsize=(36, 36))
 
     ##########################################################################
     # Plot: show distribution of true classes (absolute)
