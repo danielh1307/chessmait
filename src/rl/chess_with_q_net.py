@@ -145,13 +145,11 @@ if __name__ == "__main__":
             action_from_str, action_to_str = utils.get_actions(action_from_white, action_to_white, promotion)
             state_table_before = utils.board_to_array(board)
             utils.play_and_print(board, rounds_training, "white", action_from_str, action_to_str)
-            state_table_after = utils.board_to_array(board)
-            insufficient_material = utils.is_unsufficient_material(state_table_after)
+            state_table_after_white = utils.board_to_array(board)
+            insufficient_material = utils.is_unsufficient_material(state_table_after_white)
 
-            if reward_after_white_move == utils.WIN_REWARD and not board.is_checkmate() and not board.is_stalemate() and not insufficient_material:
-                replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
             if board.is_checkmate() or board.is_stalemate() or insufficient_material:
-                replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, True])
+                replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after_white, True])
                 reason = utils.board_status.reason_why_the_game_is_over(board)
                 if reason not in reasons:
                     reasons.append(reason)
@@ -161,19 +159,18 @@ if __name__ == "__main__":
                 action_from_black, action_to_black, promotion, reward_after_black_move = utils.select_action(env, board, eps_threshold,False, q_net.policy_net, True)
                 action_from_str, action_to_str = utils.get_actions(action_from_black, action_to_black, promotion)
                 utils.play_and_print(board, rounds_training, "black", action_from_str, action_to_str)
-                state_table_after = utils.board_to_array(board)
-                insufficient_material = utils.is_unsufficient_material(state_table_after)
+                state_table_after_black = utils.board_to_array(board)
+                insufficient_material = utils.is_unsufficient_material(state_table_after_black)
 
                 if board.is_checkmate() or board.is_stalemate() or insufficient_material:
                     reason = utils.board_status.reason_why_the_game_is_over(board)
-                    replay_memory.store([state_table_before, action_to_white, reward_after_black_move, state_table_after, True])
+                    replay_memory.store([state_table_before, action_to_white, reward_after_black_move, state_table_after_white, True])
                     if reason not in reasons:
                         reasons.append(reason)
                     if utils.black_is_winner(reason):
                         winner_name = "black"
                 else:
-                    if reward_after_white_move != utils.WIN_REWARD:
-                        replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after, False])
+                    replay_memory.store([state_table_before, action_to_white, reward_after_white_move, state_table_after_white, False])
 
             rounds_training += 1
             steps_since_model_update += 1
