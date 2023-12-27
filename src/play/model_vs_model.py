@@ -13,7 +13,6 @@ NUMBER_OF_GAMES_PER_POSITION = 1
 starting_positions = [
     ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Initial position"),
     ("rnbqkbnr/pppp1ppp/8/8/4Pp2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3", "King's Gambit accepted (~-0.3)"),
-    ("rnbqkbnr/pp1ppppp/8/8/3pP3/2P5/PP3PPP/RNBQKBNR b KQkq - 0 3", "Smith Morra Gambit (~-0.2"),
     ("r1bqk1nr/pppp1ppp/2n5/2b1p3/1PB1P3/5N2/P1PP1PPP/RNBQK2R b KQkq b3 0 4", "Evan's Gambit (~-0.3)"),
     ("3k4/8/3K4/3P4/8/8/8/8 w - - 0 1", "King and pawn vs. King, win for white"),
     ("r1bqkbnr/pppp1ppp/8/4p3/2BnP3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4", "Blackburne Shilling Gambit (~+1.1)"),
@@ -28,8 +27,8 @@ def run():
     board_status = bs.BoardStatus()
 
     # set one to None to let Stockfish play
-    model_white = tm.model_wild_snow_28
-    model_black = tm.model_apricot_armadillo_167
+    model_white = tm.model_apricot_armadillo_167
+    model_black = tm.model_graceful_glitter_166
 
     start = timer()
     no_display = False
@@ -62,12 +61,12 @@ def run():
                     white_to_move = board.turn == chess.WHITE
                     board_status.cache(board)
                     model_to_play = model_white if white_to_move else model_black
-                    if not no_display:
+                    if not no_display and moves % 20 == 0:
                         print(f"--------------- Round: {i} --- Moves: {moves:02d}")
                         print(f"White: {model_white.get_name()}")
                         print(f"Black: {model_black.get_name()}")
                         print(f"{'White to move' if white_to_move else 'Black to move'}")
-                        print(board)
+                        print(str(board))
 
                     score = stockfish_engine.analyse(board, chess.engine.Limit(depth=10))["score"]
                     score = score.white() if score.white().score() is None else score.white().score()
@@ -78,7 +77,6 @@ def run():
                         print("one-round:                 r")
                         print("automatic with display:    a")
                         print("automatic without display: n")
-                        # print(str(game))
                         console_input = input("how to proceed ?")
                         if console_input == 's':
                             stop = True
