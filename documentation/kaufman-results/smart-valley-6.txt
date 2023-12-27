@@ -1,0 +1,26 @@
+             id Winning_Move Evaluated_Move  Num_Pieces
+0   position 01         Nf6+       Nf6+ (1)          26
+1   position 02         Nxd4       Qxd2 (2)          22
+2   position 03          Rd1      Qxc5 (29)          19
+3   position 04         Rxb2       Ba7 (36)          29
+4   position 05         Qxc1       Rxc3 (2)          19
+5   position 06         Rxa2       Rxe3 (3)          20
+6   position 07         Bxe4       Kh8 (22)          30
+7   position 08           h6       Rf3 (20)          15
+8   position 09          Be2        Bh5 (5)          23
+9   position 10         Nxc3        Qh2 (9)          20
+10  position 11          Nf5        Nf5 (1)          16
+11  position 12          Rd6       Nd5 (38)          16
+12  position 13         Nxd5       Nxd5 (1)          13
+13  position 14         Rxb2      Qxg6+ (2)          19
+14  position 15         Bxf5     Qxh7+ (15)          22
+15  position 16           b4         b4 (1)          11
+16  position 17           e5       Bh6 (32)          26
+17  position 18          Qc8       Qa1 (15)          21
+18  position 19         Qxd7        Nd5 (2)          22
+19  position 20          Bg4        Kg2 (6)          14
+20  position 21         Kxb5       Kxb5 (1)           7
+21  position 22          Ba7        Be5 (7)           5
+22  position 23          Ba6       Kh8 (20)          30
+23  position 24         Bxc6       Bxc6 (1)          14
+24  position 25         Bxd7       Bxd7 (1)           9
