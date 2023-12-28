@@ -117,7 +117,7 @@ if __name__ == "__main__":
     if os.path.isfile(file_name):
         os.remove(file_name)
     with open(file_name, 'a') as f:
-        f.write("#of-trainings\tp1-training-won\tp2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\taverage-rounds-played\tduration\n")
+        f.write("#of-trainings\tp1-training-won\tp2-training-won\tdraw-training\t#of-test-games\tp1-test-won\tp2-test-won\tdraw-test\tbest-loss\taverage-rounds-played\tduration\tpromotions\n")
 
     games_training = {"draw": 0, "white": 0, "black": 0}
 
@@ -131,6 +131,7 @@ if __name__ == "__main__":
     start_episode = time.time()
 
     rounds_training_total = 0
+    promotions = 0
 
     for episode_training in range(1, EPISODES_TRAIN+1):
 
@@ -142,6 +143,8 @@ if __name__ == "__main__":
 
         while not board.is_checkmate() and not board.is_stalemate() and not board.is_fifty_moves() and not board.is_fivefold_repetition() and not insufficient_material:
             action_from_white, action_to_white, promotion, reward_after_white_move = utils.select_action(env, board, eps_threshold,True, q_net.policy_net, True)
+            if promotion != 0:
+                promotions += 1
             action_from_str, action_to_str = utils.get_actions(action_from_white, action_to_white, promotion)
             state_table_before = utils.board_to_array(board)
             utils.play_and_print(board, rounds_training, "white", action_from_str, action_to_str)
@@ -258,13 +261,15 @@ if __name__ == "__main__":
             print(f"duration: {(end - start_training):0.1f}s")
 
             with open(file_name, 'a') as f:
-                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t{EPISODES_TEST}\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\t{(rounds_test_total/EPISODES_TEST):0.1f}\t{(end - start_training):0.1f}\n")
+                f.write(f"{episode_training}\t{games_training['white']}\t{games_training['black']}\t{games_training['draw']}\t{EPISODES_TEST}\t{games_test['white']}\t{games_test['black']}\t{games_test['draw']}\t{best_loss}\t{(rounds_test_total/EPISODES_TEST):0.1f}\t{(end - start_training):0.1f}\t{promotions}\n")
 
+            promotions = 0
             start_episode = time.time()
 
     torch.save(q_net.target_net.state_dict(), os.path.join("src", "rl", "chess.pth"))
 
     print(reasons)
+    print(f"promotions: {promotions}")
 
     print("-----------------------------")
     print("RL training end ***")

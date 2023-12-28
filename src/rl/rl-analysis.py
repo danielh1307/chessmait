@@ -31,7 +31,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
 
     if best_loss_scaler is not None:
         if chess:
-            axes2.set_ylim([-0.0001, 0.002])
+            axes2.set_ylim([-0.0001, 0.0011])
         else:
             axes2.set_ylim([-1, 11])
 
@@ -41,9 +41,11 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
         sns.lineplot(y=df['best-loss']*best_loss_scaler, x=df['#of-trainings'], ax=axes, color=colors['black'], linestyle='dashed', lw=5, label="best-loss")
         axes2.tick_params(axis='y', labelcolor=colors['black'])
         axes2.set_ylabel("best-loss", fontsize=20, color=colors['black'])
+        axes.legend(borderpad=1, labelspacing=1, prop={'size': 12}, loc='upper right')
     else:
         axes2.set_ylim([-0.1, 1.1])
         axes2.set_ylabel("percent", fontsize=20, color=colors['black'])
+        axes.legend(borderpad=1, labelspacing=1, prop={'size': 12}, loc='center right')
 
     axes.set_ylim([-100, 1100])
     axes.set_ylabel("games won", fontsize=20)
@@ -52,7 +54,6 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
     axes.set_xlabel("number of games", fontsize=20)
     plt.suptitle(title, fontsize=30, fontweight='bold')
     plt.title("Comparison between " + player_1 + ", " + player_2 + " and draws", fontsize=20)
-    axes.legend(borderpad=1, labelspacing=1, prop={'size': 12}, loc='center right')
 
     plt.tight_layout()
     #plt.show()
@@ -101,5 +102,5 @@ def draw_optimizer_loss_function_statistics():
 
 draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False)
 draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False)
-draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 500000, True)
+draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 1000000, True)
 draw_optimizer_loss_function_statistics()
