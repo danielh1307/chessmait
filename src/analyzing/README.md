@@ -74,9 +74,10 @@ nearly one in every three.
 
 ## Games vs. Computer Engine
 
-| White                 | Black                 | Result  | Link                               | Model Accurary | Model centipawn loss |
-|-----------------------|-----------------------|---------|------------------------------------|----------------|----------------------|
-| graceful-glitter-166  | Lichess Level 3       | 1/2-1/2 | https://lichess.org/aCEivRm7/white | 77%            | 85                   |
-| apricot-armadillo-167 | Lichess Level 3       | 0-1     | https://lichess.org/lgM48gJu/white | 60%            | 70                   |
-| Lichess Level 3       | apricot-armadillo-167 | 1-0     | https://lichess.org/NTLBsvC9       | 59%            | 120                  |
-| Lichess Level 3       | graceful-glitter-166  | 1-0     | https://lichess.org/D6orh1tF       | 56%            | 144                  |
+| White                 | Black                       | Result  | Link                                          | Model Accurary | Model centipawn loss |
+|-----------------------|-----------------------------|---------|-----------------------------------------------|----------------|----------------------|
+| graceful-glitter-166  | Lichess Level 3             | 1/2-1/2 | https://lichess.org/aCEivRm7/white            | 77%            | 85                   |
+| apricot-armadillo-167 | Lichess Level 3             | 0-1     | https://lichess.org/lgM48gJu/white            | 60%            | 70                   |
+| Lichess Level 3       | apricot-armadillo-167       | 1-0     | https://lichess.org/NTLBsvC9                  | 59%            | 120                  |
+| Lichess Level 3       | graceful-glitter-166        | 1-0     | https://lichess.org/D6orh1tF                  | 56%            | 144                  |
+| apricot-armadillo-167 | Karim-Bot (850) (chess.com) | 1-0     | https://www.chess.com/game/computer/104024995 | 77%            | n/a                  |
