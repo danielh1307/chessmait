@@ -7,7 +7,7 @@ metrics such as training and validation loss.
 
 | Model                                                                       | Training Data          | Number of epochs | Neural Network | Loss function | Training loss | Validation loss | Comment                  |
 |-----------------------------------------------------------------------------|------------------------|------------------|----------------|---------------|---------------|-----------------|--------------------------|
-| [smart-valley-6](https://wandb.ai/chessmait/chessmait/runs/nsr3fgu3)        | 20.000 games           | 15               | MLP            | MSE           | 0.63          | 0.22            |                          |
+| [smart-valley-6](https://wandb.ai/chessmait/chessmait/runs/nsr3fgu3)        | 1.6 million positions  | 15               | MLP            | MSE           | 0.63          | 0.22            |                          |
 | [effortless-vortex-142](https://wandb.ai/chessmait/chessmait/runs/ncf2q0rz) | 5.2 million positions  | 30               | CNN            | Huber Loss    | 51.9          | 95.6            |                          |
 | [graceful-glitter-166](https://wandb.ai/chessmait/chessmait/runs/jle1wzp7)  | 15.8 million positions | 15               | MLP            | Huber Loss    | 124.8         | 127.0           |                          |
 | [apricot-armadillo-167](https://wandb.ai/chessmait/chessmait/runs/z5ras9pj) | 17.3 million positions | 15               | MLP            | Huber Loss    | 163.0         | 162.3           | Contained mate positions |
@@ -81,3 +81,14 @@ nearly one in every three.
 | Lichess Level 3       | apricot-armadillo-167       | 1-0     | https://lichess.org/NTLBsvC9                  | 59%            | 120                  |
 | Lichess Level 3       | graceful-glitter-166        | 1-0     | https://lichess.org/D6orh1tF                  | 56%            | 144                  |
 | apricot-armadillo-167 | Karim-Bot (850) (chess.com) | 1-0     | https://www.chess.com/game/computer/104024995 | 77%            | n/a                  |
+| graceful-glitter-166  | Lichess Level 3             | 1-0     | https://lichess.org/NuG12cYA/white            | 96%            | 19                   |
+| apricot-armadillo-167 | Lichess Level 3             | 1-0     | https://lichess.org/1j6YIfuF/white            | 98%            | 10                   |
+| smart-valley-6        | Lichess Level 3             | 0-1     | https://lichess.org/o0MDSHHy                  | 44%            | 234                  |
+| smart-valley-6        | Lichess Level 3             | 0-1     | https://lichess.org/KDp1UW47/white            | 74%            | 99                   |
+
+A game like https://lichess.org/NuG12cYA/white (which was won by the model) is very typically. After 19 moves, it was
+mate in 3 for the model, however, it did not find the mate.
+This is very typically for graceful-glitter-166, since all moves above +1000 and beyond -1000 were set to that value (to
+get rid of outliers), and mate positions were not included.
+The model just makes some random moves because all positions are evaluated in the range of +1000, which is not wrong,
+but the model cannot do any progress.
