@@ -8,9 +8,9 @@ import pandas as pd
 import torch
 
 from src.lib.analytics_utilities import count_pieces
-from src.lib.fen_to_tensor import fen_to_tensor_one_board
+from src.lib.fen_to_tensor import fen_to_bitboard
 from src.lib.utilities import get_device
-from src.model.ChessmaitMlp5 import ChessmaitMlp5
+from src.model.ChessmaitCnn4Bitboard import ChessmaitCnn4Bitboard
 
 # This script lets the user prompt a FEN position. For all possible moves,
 # the evaluations are predicted by a model and calculated by a (local) Stockfish
@@ -20,12 +20,12 @@ from src.model.ChessmaitMlp5 import ChessmaitMlp5
 device = get_device()
 
 # adjust those values based on the used model
-MODEL_NAME = "lemon-plasma-103"
-model = ChessmaitMlp5()
+MODEL_NAME = "fresh-blaze-174"
+model = ChessmaitCnn4Bitboard()
 
 
 def fen_to_tensor(_fen):
-    return fen_to_tensor_one_board(_fen)
+    return fen_to_bitboard(_fen)
 
 
 def evaluate_board_by_model(_board):
