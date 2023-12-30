@@ -10,6 +10,12 @@ More details can be found in our [project proposal](documentation/Projektantrag_
 
 ![](documentation/logo.jpg)
 
+# Important Links
+
+[Seaborn Plots of results of specific models](data/diagrams/README.md)  
+[Loss, Kaufman Test result and games vs. Computer Engines](src/analyzing/README.md)  
+[Model vs Model Play](src/play/README.md)
+
 # For developers
 
 ## Set up and handle environment
