@@ -102,5 +102,6 @@ def draw_optimizer_loss_function_statistics():
 
 draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False)
 draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False)
-draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess", 1000000, True)
+draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess 3-Layer", 1000000, True)
+draw_dataframe("chess-statistics-q-net-5-layer", "Q-Net-Chess 5-Layer", 1000000, True)
 draw_optimizer_loss_function_statistics()
