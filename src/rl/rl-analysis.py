@@ -5,7 +5,7 @@ import seaborn as sns
 import numpy as np
 
 
-def draw_dataframe(name, title, best_loss_scaler, chess):
+def draw_dataframe(name, title, best_loss_scaler, chess, five_layer):
 
     df = pd.read_csv("statistics/" + name + ".csv", delimiter="\t", header=0)
     df.drop(df.tail(1).index, inplace=True)  # drop last row
@@ -31,7 +31,10 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
 
     if best_loss_scaler is not None:
         if chess:
-            axes2.set_ylim([-0.0001, 0.0011])
+            if five_layer:
+                axes2.set_ylim([-0.00001, 0.00011])
+            else:
+                axes2.set_ylim([-0.0001, 0.0011])
             sns.lineplot(data=df, y='promotions', x='#of-trainings', ax=axes, color=colors['gray'], linestyle='dotted', lw=2, label="number of promotions")
         else:
             axes2.set_ylim([-1, 11])
@@ -101,8 +104,8 @@ def draw_optimizer_loss_function_statistics():
     plt.savefig('optimizer-vs-loss-function.png', bbox_inches='tight')
 
 
-draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False)
-draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False)
-draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess 3-Layer", 1000000, True)
-draw_dataframe("chess-statistics-q-net-5-layer", "Q-Net-Chess 5-Layer", 1000000, True)
+draw_dataframe("tic-tac-toe-statistics-q-table", "Q-Table-Tic-Tac-Toe", None, False, False)
+draw_dataframe("tic-tac-toe-statistics-q-net", "Q-Net-Tic-Tac-Toe", 100, False, False)
+draw_dataframe("chess-statistics-q-net-3-layer", "Q-Net-Chess 3-Layer", 1000000, True, False)
+draw_dataframe("chess-statistics-q-net-5-layer", "Q-Net-Chess 5-Layer", 10000000, True, True)
 draw_optimizer_loss_function_statistics()
