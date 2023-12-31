@@ -32,6 +32,7 @@ def draw_dataframe(name, title, best_loss_scaler, chess):
     if best_loss_scaler is not None:
         if chess:
             axes2.set_ylim([-0.0001, 0.0011])
+            sns.lineplot(data=df, y='promotions', x='#of-trainings', ax=axes, color=colors['gray'], linestyle='dotted', lw=2, label="number of promotions")
         else:
             axes2.set_ylim([-1, 11])
 
