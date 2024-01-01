@@ -92,7 +92,7 @@ class QNetContext:
         loss = loss_function(predicted_qs, updated_qs)
         optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
+        #torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
         optimizer.step()
         return loss
 

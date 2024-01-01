@@ -200,7 +200,7 @@ def select_action(env, board, eps_threshold, is_white, model, is_training):
     legal_moves_fen = get_valid_positions(board.fen())
     before = board_to_array(board)
     if not is_white:
-        result = env.play(board, chess.engine.Limit(time=0.01, depth=2))
+        result = env.play(board, chess.engine.Limit(time=0.1, depth=10))
         new_board = chess.Board()
         new_board.set_fen(board.fen())
         new_board.push(result.move)
