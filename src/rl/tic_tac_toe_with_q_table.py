@@ -19,7 +19,6 @@ MIN_EPS = 0.1 # ...until this minimum eps is reached
 LR = 0.4
 
 POSSIBLE_INDEXES = np.arange(9)
-MAX_NUMBER_OF_ITERATIONS = 1_000_001
 
 env = tictactoe_v3.raw_env()
 env.reset(seed=42)

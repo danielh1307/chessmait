@@ -41,6 +41,7 @@ LOST_REWARD = -1
 device = ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 board_status = BoardStatus()
 
+
 class QNet(nn.Module):
     def __init__(self):
         super(QNet, self).__init__()
@@ -59,6 +60,16 @@ class QNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.3)
         )
+        self.layer4 = nn.Sequential(
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        )
+        self.layer5 = nn.Sequential(
+            nn.Linear(OUT_FEATURES, OUT_FEATURES),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        )
         self.output_layer = nn.Sequential(
             nn.Linear(OUT_FEATURES, BOARD_SIZE),
         )
@@ -68,7 +79,10 @@ class QNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.layer5(x)
         return self.output_layer(x)
+
 
 def board_to_tensor_with_state(this_state):
     return torch.tensor(this_state, device=device, dtype=float).flatten()
@@ -81,6 +95,7 @@ def board_to_tensor_with_board(this_board):
 
 def board_to_array(this_board):
     return np.array(board_status.convert_to_int(this_board)).flatten()
+
 
 def get_q_values(board, model):
     inputs = board_to_tensor_with_board(board)

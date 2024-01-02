@@ -82,8 +82,6 @@ class QNetContext:
                 sum_loss += self.backpropagate(state, action_next, q_value_max * GAMMA)
                 state_next = state
 
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-
         return sum_loss
 
     def backpropagate(self, state, action, reward):

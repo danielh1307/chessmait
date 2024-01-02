@@ -92,7 +92,7 @@ class QNetContext:
         loss = loss_function(predicted_qs, updated_qs)
         optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
+        #torch.nn.utils.clip_grad_value_(q_net.policy_net.parameters(), 100)
         optimizer.step()
         return loss
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         games_training[winner_name] += 1
 
         if episode_training % (EPISODES_TEST/10) == 0 and episode_training != 0:
-            print(f"episode: {episode_training:6} - best-loss: {best_loss:0.16f} - average rounds played: {(rounds_training_total/EPISODES_TEST*10):0.1f}")
+            print(f"episode: {episode_training:6} - best-loss: {best_loss} - average rounds played: {(rounds_training_total/EPISODES_TEST*10):0.1f}")
             rounds_training_total = 0
 
         if episode_training % EPISODES_TEST == 0 and episode_training != 0:
