@@ -43,21 +43,22 @@ possible moves. A lower number signifies a better move by the model, with the id
 
 ## Games vs. Computer Engine
 
-| White                 | Black                       | Result  | Link                                          | Model Accurary | Model centipawn loss |
-|-----------------------|-----------------------------|---------|-----------------------------------------------|----------------|----------------------|
-| graceful-glitter-166  | Lichess Level 3             | 1/2-1/2 | https://lichess.org/aCEivRm7/white            | 77%            | 85                   |
-| apricot-armadillo-167 | Lichess Level 3             | 0-1     | https://lichess.org/lgM48gJu/white            | 60%            | 70                   |
-| Lichess Level 3       | apricot-armadillo-167       | 1-0     | https://lichess.org/NTLBsvC9                  | 59%            | 120                  |
-| Lichess Level 3       | graceful-glitter-166        | 1-0     | https://lichess.org/D6orh1tF                  | 56%            | 144                  |
-| apricot-armadillo-167 | Karim-Bot (850) (chess.com) | 1-0     | https://www.chess.com/game/computer/104024995 | 77%            | n/a                  |
-| graceful-glitter-166  | Lichess Level 3             | 1-0     | https://lichess.org/NuG12cYA/white            | 96%            | 19                   |
-| apricot-armadillo-167 | Lichess Level 3             | 1-0     | https://lichess.org/1j6YIfuF/white            | 98%            | 10                   |
-| smart-valley-6        | Lichess Level 3             | 0-1     | https://lichess.org/o0MDSHHy                  | 44%            | 234                  |
-| smart-valley-6        | Lichess Level 3             | 0-1     | https://lichess.org/KDp1UW47/white            | 74%            | 99                   |
+Below are some sample matches of our models vs different engines.
 
-A game like https://lichess.org/NuG12cYA/white (which was won by the model) is very typical.
-After 19 moves, it was mate in 3 for the model, however, it did not find the mate.
-This is very typically for graceful-glitter-166, since all moves above +1000 and beyond -1000 were set to that value (to
-get rid of outliers), and mate positions were not included.
-The model just makes some random moves because all positions are evaluated in the range of +1000, which is not wrong,
-but the model cannot do any progress.
+| White                         | Black                       | Result  | Link                                          | Model Accurary | Model centipawn loss |
+|-------------------------------|-----------------------------|---------|-----------------------------------------------|----------------|----------------------|
+| graceful-glitter-166          | Lichess Level 3             | 1/2-1/2 | https://lichess.org/aCEivRm7                  | 77%            | 85                   |
+| apricot-armadillo-167         | **Lichess Level 3**         | 0-1     | https://lichess.org/lgM48gJu                  | 60%            | 70                   |
+| **Lichess Level 3**           | apricot-armadillo-167       | 1-0     | https://lichess.org/NTLBsvC9                  | 59%            | 120                  |
+| **Lichess Level 3**           | graceful-glitter-166        | 1-0     | https://lichess.org/D6orh1tF                  | 56%            | 144                  |
+| **apricot-armadillo-167**     | Karim-Bot (850) (chess.com) | 1-0     | https://www.chess.com/game/computer/104024995 | 77%            | n/a                  |
+| **graceful-glitter-166**      | Lichess Level 3             | 1-0     | https://lichess.org/NuG12cYA                  | 96%            | 19                   |
+| **apricot-armadillo-167**     | Lichess Level 3             | 1-0     | https://lichess.org/1j6YIfuF                  | 98%            | 10                   |
+| smart-valley-6                | **Lichess Level 3**         | 0-1     | https://lichess.org/o0MDSHHy                  | 44%            | 234                  |
+| smart-valley-6                | **Lichess Level 3**         | 0-1     | https://lichess.org/KDp1UW47                  | 74%            | 99                   |
+| Matteo-Bot (1400) (chess.com) | apricot-armadillo-167       | 1/2-1/2 | https://www.chess.com/game/computer/104190707 | 74%            | n/a                  |
+
+The game at https://lichess.org/NuG12cYA, won by the model, is a typical example. After 19 moves, the model had a mate
+in 3 but failed to execute it. This is common for graceful-glitter-166, as all moves are capped at +1000 or -1000 to
+eliminate outliers, excluding mate positions. Consequently, the model makes arbitrary moves within the +1000 range,
+hindering its progress.
