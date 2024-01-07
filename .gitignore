@@ -172,6 +172,6 @@ data/pickle-classification-fen-to-tensor-one-board
 data/preprocessed-classification
 data/test
 /data/saved/
-/data/angelo/
+/data/preprocessed/
 
 /data/raw/lichess/
