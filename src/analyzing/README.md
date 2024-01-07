@@ -32,7 +32,7 @@ In addition to standard performance metrics, we evaluated how effectively our mo
 against other engines or each other, we conducted the [Kaufman test](https://www.chessprogramming.org/Kaufman_Test),
 which involves 25 challenging positions where the model predicts the next best move.
 
-The results are shown in the table below, indicating the ranking of the model's suggested move by Stockfish among all
+The results are shown in the links below, indicating the ranking of the model's suggested move by Stockfish among all
 possible moves. A lower number signifies a better move by the model, with the ideal being 1.
 
 [Results smart-valley-6](../../documentation/kaufman-results/smart-valley-6.txt)  
@@ -40,6 +40,16 @@ possible moves. A lower number signifies a better move by the model, with the id
 [Results graceful-glitter-166](../../documentation/kaufman-results/graceful-glitter-166.txt)  
 [Results apricot-armadillo-167](../../documentation/kaufman-results/apricot-armadillo-167.txt)  
 [Results fresh-blaze-174](../../documentation/kaufman-results/fresh-blaze-174.txt)
+
+All in all, the following results were achieved:  
+
+| Model                  | Number of times best move was found |
+|------------------------|-------------------------------------|
+| smart-valley-6         | 0                                   |
+| effortless-vortext-142 | 2                                   |
+| graceful-glitter-166   | 4                                   |
+| apricot-armadillo-167  | 7                                   |
+| fresh-blaze-174        | 7                                   |
 
 ## Games vs. Computer Engine
 
