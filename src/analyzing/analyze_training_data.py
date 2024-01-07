@@ -11,7 +11,7 @@ from src.lib.utilities import get_files_from_pattern, dataframe_from_files, writ
 # It creates seaborn plots of the given .csv files.
 
 
-PATH_TO_DATAFILE = os.path.join("data", "angelo")
+PATH_TO_DATAFILE = os.path.join("data", "preprocessed")
 
 REGRESSION_CLASSES = {
     ">4": {

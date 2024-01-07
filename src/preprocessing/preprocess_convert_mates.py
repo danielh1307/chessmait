@@ -8,8 +8,8 @@ from src.lib.utilities import get_files_from_pattern
 # In recent trainings, we have removed the mates from the evaluation since they are no numbers.
 # With this script, we transform the mates to numbers to include them in further training.
 
-DATA_DIRECTORY = os.path.join("data", "angelo")
-FILE_PATTERN = "x_lichess_db_standard_rated_2023-03-005.csv"
+DATA_DIRECTORY = os.path.join("data", "preprocessed")
+FILE_PATTERN = "insert-file-pattern-here"
 
 
 def convert_mate():
