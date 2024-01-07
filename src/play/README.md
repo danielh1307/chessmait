@@ -37,6 +37,7 @@ marked in the table.
 | Blackburne Shilling Gambit | **graceful-glitter-166**  | smart-valley-6            |           |           | 1          |            |      |
 | Traxler Counterattack      | **graceful-glitter-166**  | smart-valley-6            |           |           | 1          |            |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | graceful-glitter-166      | **apricot-armadillo-167** |           |           |            | 1          |      |
 | King's Gambit Accepted     | graceful-glitter-166      | **apricot-armadillo-167** |           |           |            | 1          |      |
 | Evan's Gambit              | graceful-glitter-166      | apricot-armadillo-167     | 1         |           |            |            | 1    |
@@ -51,6 +52,7 @@ marked in the table.
 | Blackburne Shilling Gambit | apricot-armadillo-167     | **graceful-glitter-166**  |           |           |            | 1          |      |
 | Traxler Counterattack      | apricot-armadillo-167     | **graceful-glitter-166**  |           |           |            | 1          |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | apricot-armadillo-167     | effortless-vortex-142     |           | 1         |            |            | 1    |
 | King's Gambit Accepted     | apricot-armadillo-167     | effortless-vortex-142     |           | 1         |            |            | 1    |
 | Evan's Gambit              | **apricot-armadillo-167** | effortless-vortex-142     |           |           | 1          |            |      |
@@ -65,6 +67,7 @@ marked in the table.
 | Blackburne Shilling Gambit | effortless-vortex-142     | apricot-armadillo-167     | 1         |           |            |            | 1    |
 | Traxler Counterattack      | effortless-vortex-142     | **apricot-armadillo-167** |           |           |            | 1          |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | **fresh_blaze_174**       | effortless-vortex-142     |           |           | 1          |            |      |
 | King's Gambit Accepted     | **fresh_blaze_174**       | effortless-vortex-142     |           |           | 1          |            |      |
 | Evan's Gambit              | fresh_blaze_174           | **effortless-vortex-142** |           |           |            | 1          |      |
@@ -79,6 +82,7 @@ marked in the table.
 | Blackburne Shilling Gambit | **effortless-vortex-142** | fresh_blaze_174           |           |           | 1          |            |      |
 | Traxler Counterattack      | effortless-vortex-142     | **fresh_blaze_174**       |           |           |            | 1          |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | graceful-glitter-166      | **fresh_blaze_174**       |           |           |            | 1          |      |
 | King's Gambit Accepted     | graceful-glitter-166      | fresh_blaze_174           | 1         |           |            |            | 1    |
 | Evan's Gambit              | graceful-glitter-166      | **fresh_blaze_174**       |           |           |            | 1          |      |
@@ -93,6 +97,7 @@ marked in the table.
 | Blackburne Shilling Gambit | fresh_blaze_174           | **graceful-glitter-166**  |           |           |            | 1          |      |
 | Traxler Counterattack      | **fresh_blaze_174**       | graceful-glitter-166      |           |           | 1          |            |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | fresh_blaze_174           | apricot-armadillo-167     |           | 1         |            |            | 1    |
 | King's Gambit Accepted     | fresh_blaze_174           | **apricot-armadillo-167** |           |           |            | 1          |      |
 | Evan's Gambit              | **fresh_blaze_174**       | apricot-armadillo-167     |           |           | 1          |            |      |
@@ -107,6 +112,7 @@ marked in the table.
 | Blackburne Shilling Gambit | **apricot-armadillo-167** | fresh_blaze_174           |           |           | 1          |            |      |
 | Traxler Counterattack      | **apricot-armadillo-167** | fresh_blaze_174           |           |           | 1          |            |      |
 |                            |                           |                           |           |           |            |            |      |
+| Position                   | White                     | Black                     | White +10 | Black +10 | White wins | Black Wins | Draw |
 | Initial Position           | **effortless-vortex-142** | graceful-glitter-166      |           |           | 1          |            |      |
 | King's Gambit Accepted     | effortless-vortex-142     | **graceful-glitter-166**  |           |           |            | 1          |      |
 | Evan's Gambit              | effortless-vortex-142     | graceful-glitter-166      | 1         |           |            |            | 1    |
@@ -121,12 +127,10 @@ marked in the table.
 | Blackburne Shilling Gambit | **graceful-glitter-166**  | effortless-vortex-142     |           |           | 1          |            |      |
 | Traxler Counterattack      | graceful-glitter-166      | **effortless-vortex-142** |           |           |            | 1          |      |
 
-
-
 | x                     | effortless-vortex-142 | graceful-glitter-166 | apricot-armadillo-167 | fresh_blaze_174 | Ergebnis |
 |-----------------------|-----------------------|----------------------|-----------------------|-----------------|----------|
-| effortless-vortex-142 | x                     | 3:5 (5:6) 0          | 1:5 (5:6) 0           | 3:5 (5:6) 0     | 0        |
-| graceful-glitter-166  | 5:3 (6:5) +1          | x                    | 5:5 (7:5) +0.5        | 2:6 (4:7) 0     | +1.5     |
-| apricot-armadillo-167 | 5:1 (6:5) +1          | 5:5 (5:7) +0.5       | x                     | 6:3 (7:4) +1    | +2.5     |
-| fresh_blaze_174       | 5:3 (6:5) +1          | 6:2 (7:4) +1         | 3:6 (4:7) 0           | x               | +2       |
+| effortless-vortex-142 | x                     | 5:7                  | 4:8                   | 5:7             | 0        |
+| graceful-glitter-166  | 7:5                   | x                    | 6:6                   | 4:8             | +1.5     |
+| apricot-armadillo-167 | 8:4                   | 6:6                  | x                     | 7.5:4.5         | +2.5     |
+| fresh_blaze_174       | 7:5                   | 8:4                  | 4.5:7.5               | x               | +2       |
 
